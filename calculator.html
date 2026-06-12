@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Backend Network Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    /* Modern Slate & Indigo Light Theme */
+    --bg: #ffffff; 
+    --bg2: #f8fafc; 
+    --bg3: #f1f5f9;
+    --text: #0f172a; 
+    --text2: #475569; 
+    --text3: #64748b;
+    --border: #e2e8f0; 
+    --border2: #cbd5e1;
+    
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --primary-light: #e0e7ff;
+    --primary-text: #3730a3;
+
+    --teal50: #ecfdf5; --teal600: #059669; --teal800: #065f46;
+    --coral50: #fef2f2; --coral600: #dc2626; --coral800: #991b1b;
+    --info-bg: #eff6ff; --info-text: #1e3a8a; --info-border: #3b82f6;
+    
+    --radius: 10px; 
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      /* Deep Slate Dark Theme */
+      --bg: #1e293b; 
+      --bg2: #0f172a; 
+      --bg3: #020617;
+      --text: #f8fafc; 
+      --text2: #cbd5e1; 
+      --text3: #94a3b8;
+      --border: #334155; 
+      --border2: #475569;
+      
+      --primary: #818cf8;
+      --primary-hover: #6366f1;
+      --primary-light: #312e81;
+      --primary-text: #c7d2fe;
+
+      --teal50: #064e3b; --teal800: #34d399;
+      --coral50: #7f1d1d; --coral800: #fca5a5;
+      --info-bg: #1e3a8a; --info-text: #bfdbfe; --info-border: #3b82f6;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+      --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  body { 
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    background: var(--bg3); 
+    color: var(--text); 
+    min-height: 100vh; 
+    padding: 3rem 1.5rem; 
+    line-height: 1.5;
+  }
+  
+  .container { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 28px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.02em; }
+  .subtitle { font-size: 15px; color: var(--text2); margin-bottom: 2.5rem; }
+  
+  .card { 
+    background: var(--bg); 
+    border: 1px solid var(--border); 
+    border-radius: var(--radius-lg); 
+    padding: 1.5rem 1.75rem; 
+    margin-bottom: 1.25rem;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover { box-shadow: var(--shadow-hover); }
+
+  .section-label { 
+    font-size: 12px; 
+    color: var(--primary); 
+    text-transform: uppercase; 
+    letter-spacing: 0.1em; 
+    font-weight: 600; 
+    margin-bottom: 16px; 
+  }
+  
+  .input-row { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+  .input-row label { font-size: 14px; font-weight: 500; color: var(--text2); min-width: 180px; }
+  .input-row input, .input-row select {
+    font-family: inherit;
+    font-size: 14px; 
+    padding: 9px 12px; 
+    border-radius: var(--radius); 
+    width: 140px;
+    border: 1px solid var(--border2); 
+    background: var(--bg2); 
+    color: var(--text);
+    outline: none; 
+    transition: all 0.2s ease;
+    box-shadow: inset var(--shadow-sm);
+  }
+  .input-row input:focus, .input-row select:focus { 
+    border-color: var(--primary); 
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); 
+    background: var(--bg);
+  }
+  .input-row .hint { font-size: 13px; color: var(--text3); }
+  
+  .or-divider { 
+    display: flex; align-items: center; gap: 12px; margin: 18px 0; 
+    color: var(--text3); font-size: 12px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;
+  }
+  .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Tier selector */
+  .tier-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 8px; }
+  .tier-opt { position: relative; cursor: pointer; }
+  .tier-opt input[type=radio] { position: absolute; opacity: 0; width: 0; height: 0; }
+  .tier-opt-inner {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 16px 12px; border-radius: var(--radius-lg);
+    border: 2px solid var(--border); background: var(--bg2);
+    transition: all 0.2s ease;
+    text-align: center; user-select: none;
+  }
+  .tier-opt input:checked + .tier-opt-inner { 
+    border-color: var(--primary); 
+    background: var(--primary-light); 
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+  }
+  .tier-opt-inner:hover { border-color: var(--primary); }
+  .tier-opt-icon { font-size: 24px; line-height: 1; color: var(--text3); transition: color 0.2s ease; }
+  .tier-opt-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .tier-opt-range { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  
+  .tier-opt input:checked + .tier-opt-inner .tier-opt-name,
+  .tier-opt input:checked + .tier-opt-inner .tier-opt-icon { color: var(--primary-text); }
+  .tier-opt input:checked + .tier-opt-inner .tier-opt-range { color: var(--primary); }
+  
+  .tier-hint { font-size: 13px; color: var(--text3); margin-top: 12px; min-height: 18px; font-style: italic; }
+
+  .calc-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 14px 24px; font-size: 16px; font-weight: 600; cursor: pointer;
+    border-radius: var(--radius-lg); border: none;
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover)); 
+    color: white; 
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    margin-top: 16px;
+    font-family: inherit;
+  }
+  .calc-btn:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4); 
+  }
+  .calc-btn:active { transform: translateY(0) scale(0.98); }
+  .calc-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  
+  #results { margin-top: 2rem; }
+  .tier-badge { 
+    display: inline-flex; align-items: center; gap: 6px; 
+    padding: 6px 16px; border-radius: 20px; 
+    font-size: 13px; font-weight: 600; margin-bottom: 20px; 
+    box-shadow: var(--shadow-sm);
+  }
+  .tier-1 { background: var(--teal50); color: var(--teal800); border: 1px solid rgba(5, 150, 105, 0.2); }
+  .tier-2 { background: var(--primary-light); color: var(--primary-text); border: 1px solid rgba(99, 102, 241, 0.2); }
+  .tier-3 { background: var(--coral50); color: var(--coral800); border: 1px solid rgba(220, 38, 38, 0.2); }
+  
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .metric-card { 
+    background: var(--bg); border: 1px solid var(--border); 
+    border-radius: var(--radius-lg); padding: 16px; 
+    box-shadow: var(--shadow-sm);
+    text-align: center;
+  }
+  .metric-label { font-size: 12px; color: var(--text3); font-weight: 500; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-val { font-size: 28px; font-weight: 600; color: var(--text); }
+  .metric-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+  
+  .result-section { 
+    border: 1px solid var(--border); border-radius: var(--radius-lg); 
+    padding: 20px; margin-bottom: 16px; background: var(--bg); 
+    box-shadow: var(--shadow-sm);
+  }
+  .result-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; color: var(--text); }
+  .result-section h3 svg { width: 20px; height: 20px; stroke: var(--primary); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  
+  .breakdown-table { width: 100%; font-size: 14px; border-collapse: collapse; }
+  .breakdown-table td { padding: 10px 0; color: var(--text2); vertical-align: middle; }
+  .breakdown-table td:last-child { text-align: right; font-weight: 600; color: var(--text); }
+  .breakdown-table tr + tr td { border-top: 1px solid var(--border); }
+  .breakdown-table .subtotal td { border-top: 2px solid var(--border2); font-weight: 600; color: var(--text); padding-top: 12px; }
+  .breakdown-table .subtotal td:last-child { color: var(--primary); font-size: 15px; }
+  
+  .note-box { 
+    background: var(--info-bg); border-left: 4px solid var(--info-border); 
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 12px 16px; 
+    font-size: 13px; color: var(--info-text); margin-top: 16px; line-height: 1.5;
+  }
+  .warn-box { 
+    background: #fffbeb; border-left: 4px solid #f59e0b; 
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 12px 16px; 
+    font-size: 13px; color: #92400e; margin-top: 12px; margin-bottom: 20px;
+  }
+  @media (prefers-color-scheme: dark) {
+    .warn-box { background: #451a03; border-color: #f59e0b; color: #fde68a; }
+  }
+  .error-msg { 
+    background: var(--coral50); color: var(--coral800); 
+    font-size: 14px; font-weight: 500; padding: 12px 16px; 
+    border-radius: var(--radius); border-left: 4px solid var(--coral600);
+  }
+
+  /* Architectural Diagram CSS */
+  .diagram-wrapper { 
+    margin-top: 20px; padding: 24px; background: var(--bg2); 
+    border-radius: var(--radius-lg); border: 1px solid var(--border); 
+    display: flex; flex-direction: column; align-items: center; gap: 0px; 
+  }
+  .diag-title { 
+    width: 100%; font-size: 15px; font-weight: 600; color: var(--text); 
+    display: flex; align-items: center; gap: 8px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .diag-title svg { width: 20px; height: 20px; stroke: var(--primary); fill: none; stroke-width: 2; }
+  .diag-box { 
+    background: var(--bg); border: 2px solid var(--border2); 
+    border-radius: var(--radius); padding: 16px 24px; text-align: center; 
+    min-width: 260px; box-shadow: var(--shadow-sm); z-index: 2; transition: border-color 0.2s; 
+  }
+  .diag-box:hover { border-color: var(--primary); }
+  .diag-box-title { font-weight: 600; font-size: 15px; color: var(--text); }
+  .diag-box-sub { font-size: 13px; color: var(--text3); margin-top: 4px; }
+  .diag-link { 
+    display: flex; align-items: center; justify-content: center; 
+    height: 60px; position: relative; width: 2px; background: var(--border2); z-index: 1; 
+  }
+  .diag-link-label { 
+    position: absolute; background: var(--bg2); padding: 4px 14px; 
+    font-size: 13px; font-weight: 600; color: var(--primary); 
+    border: 1px solid var(--border2); border-radius: 20px; white-space: nowrap; z-index: 2; box-shadow: var(--shadow-sm); 
+  }
+
+  @media print {
+    body { background: white; padding: 0; color: black; }
+    .card, .metric-card, .result-section, .diagram-wrapper { box-shadow: none; border-color: #ccc; }
+    .calc-btn { display: none; }
+    #results .result-section, #results .diagram-wrapper { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>AI backend network calculator</h1>
+  <p class="subtitle">Switch counts, optics, and cabling for GPU clusters</p>
+
+  <div class="card">
+    <p class="section-label">Cluster size</p>
+    <div class="input-row">
+      <label>Total GPUs</label>
+      <input type="number" id="total-gpus" min="1" placeholder="e.g. 4096" oninput="syncFromTotal()">
+    </div>
+    <div class="or-divider">or</div>
+    <div class="input-row">
+      <label>Nodes (servers)</label>
+      <input type="number" id="num-nodes" min="1" placeholder="e.g. 512" oninput="syncFromNodes()">
+    </div>
+    <div class="input-row">
+      <label>GPUs per node</label>
+      <input type="number" id="gpus-per-node" min="1" value="8" oninput="syncFromNodes()">
+    </div>
+    <div class="input-row">
+      <label>Backend NICs per GPU</label>
+      <input type="number" id="nics-per-gpu" min="1" value="2">
+      <span class="hint">e.g. 1 (standard) or 2</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-label">Fabric tier</p>
+    <div class="tier-selector">
+      <label class="tier-opt">
+        <input type="radio" name="tier" value="1" onchange="updateTierHint()">
+        <div class="tier-opt-inner">
+          <div class="tier-opt-icon">▪</div>
+          <div class="tier-opt-name">Single-tier</div>
+          <div class="tier-opt-range">up to ~1,152 GPUs</div>
+        </div>
+      </label>
+      <label class="tier-opt">
+        <input type="radio" name="tier" value="2" checked onchange="updateTierHint()">
+        <div class="tier-opt-inner">
+          <div class="tier-opt-icon">▪▪</div>
+          <div class="tier-opt-name">Two-tier</div>
+          <div class="tier-opt-range">~1K – 74K GPUs</div>
+        </div>
+      </label>
+      <label class="tier-opt">
+        <input type="radio" name="tier" value="3" onchange="updateTierHint()">
+        <div class="tier-opt-inner">
+          <div class="tier-opt-icon">▪▪▪</div>
+          <div class="tier-opt-name">Three-tier</div>
+          <div class="tier-opt-range">74K+ GPUs</div>
+        </div>
+      </label>
+    </div>
+    <div class="tier-hint" id="tier-hint">Leaf-spine Clos — the standard for most AI training clusters.</div>
+  </div>
+
+  <div class="card">
+    <p class="section-label">Switch configuration</p>
+    <div class="input-row">
+      <label>Leaf switch radix</label>
+      <input type="number" id="leaf-radix" min="16" max="128" value="64" step="16">
+      <span class="hint">ports per leaf</span>
+    </div>
+    <div class="input-row">
+      <label>Spine switch radix</label>
+      <input type="number" id="spine-radix" min="16" max="256" value="64" step="16">
+      <span class="hint">ports per spine</span>
+    </div>
+    <div class="input-row">
+      <label>Planes</label>
+      <input type="number" id="planes" min="1" max="8" value="8">
+      <span class="hint">redundant fabrics</span>
+    </div>
+    <div class="input-row">
+      <label>Oversubscription</label>
+      <input type="number" id="oversub" min="1" max="4" step="0.5" value="1">
+      <span class="hint">1 = non-blocking</span>
+    </div>
+    <div class="input-row">
+      <label>Host port breakout</label>
+      <select id="breakout">
+        <option value="1">1:1 (None)</option>
+        <option value="2" selected>1:2 (e.g. 800G → 2x 400G)</option>
+        <option value="4">1:4 (e.g. 800G → 4x 200G)</option>
+      </select>
+      <span class="hint">switch to host links</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-label">Optics</p>
+    <div class="input-row">
+      <label>Spine link speed</label>
+      <select id="spine-speed">
+        <option value="400">400G</option>
+        <option value="800" selected>800G</option>
+      </select>
+      <span class="hint">leaf ↔ spine</span>
+    </div>
+    <div class="input-row">
+      <label>Host NIC link speed</label>
+      <select id="host-speed">
+        <option value="100">100G</option>
+        <option value="200">200G</option>
+        <option value="400" selected>400G</option>
+        <option value="800">800G</option>
+      </select>
+      <span class="hint">host ↔ leaf</span>
+    </div>
+    <div class="input-row">
+      <label>Spare optics buffer</label>
+      <input type="number" id="spare-pct" min="0" max="50" value="0" step="5">
+      <span class="hint">% recommended spares</span>
+    </div>
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">
+    <svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+    Calculate Network Requirements
+  </button>
+
+  <div id="results"></div>
+</div>
+
+<script>
+const TIER_HINTS = {
+  '1': 'Collapsed spine — hosts connect directly to spine switches. Simple, low latency, suits small clusters.',
+  '2': 'Leaf-spine Clos — the standard for most AI training clusters. Full ECMP mesh, 1:1 non-blocking.',
+  '3': 'Three-tier Clos — hyperscale fabric for very large clusters. Pod-based for blast-radius containment.'
+};
+
+function updateTierHint() {
+  const t = document.querySelector('input[name=tier]:checked').value;
+  document.getElementById('tier-hint').textContent = TIER_HINTS[t];
+}
+
+function syncFromTotal() {
+  const g = parseInt(document.getElementById('total-gpus').value) || 0;
+  const gpn = parseInt(document.getElementById('gpus-per-node').value) || 8;
+  if (g > 0) document.getElementById('num-nodes').value = Math.ceil(g / gpn);
+}
+
+function syncFromNodes() {
+  const n = parseInt(document.getElementById('num-nodes').value) || 0;
+  const gpn = parseInt(document.getElementById('gpus-per-node').value) || 8;
+  if (n > 0) document.getElementById('total-gpus').value = n * gpn;
+}
+
+function opticType(speed) {
+  return { 100: 'QSFP28 100G SR4', 200: 'QSFP56 200G SR4', 400: 'QSFP-DD 400G SR4', 800: 'OSFP 800G SR8' }[speed] || speed + 'G';
+}
+
+function fmtN(n) { return Math.round(n).toLocaleString(); }
+function iconServer() { return '<svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>'; }
+function iconBranch() { return '<svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="12" r="2"/><line x1="6" y1="8" x2="6" y2="16"/><path d="M6 12 Q14 12 18 12" fill="none"/></svg>'; }
+function iconPlug()   { return '<svg viewBox="0 0 24 24"><path d="M12 22v-4"/><path d="M8 22v-4"/><rect x="6" y="14" width="8" height="4" rx="1"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="12" y1="2" x2="12" y2="6"/><path d="M6 6h8v4a4 4 0 0 1-8 0V6z"/></svg>'; }
+
+function metric(val, label, sub) {
+  return '<div class="metric-card"><div class="metric-label">' + label + '</div><div class="metric-val">' + val + '</div>' + (sub ? '<div class="metric-sub">' + sub + '</div>' : '') + '</div>';
+}
+
+function mkSection(icon, title, rows, note) {
+  let s = '<div class="result-section"><h3>' + icon + title + '</h3><table class="breakdown-table">';
+  for (const [k, v, sub] of rows) {
+    s += '<tr' + (sub ? ' class="subtotal"' : '') + '><td>' + k + '</td><td>' + v + '</td></tr>';
+  }
+  s += '</table>' + (note ? '<div class="note-box">' + note + '</div>' : '') + '</div>';
+  return s;
+}
+
+function opticsSection(rows, noteText) {
+  let s = '<div class="result-section"><h3>' + iconPlug() + 'Optics breakdown</h3>';
+  s += '<p style="font-size:13px;color:var(--text3);margin-bottom:16px">Each link requires transceivers at both ends. Breakouts split a single switch optic into multiple host connections.</p>';
+  s += '<table class="breakdown-table">';
+  for (const [k, v, isSub, spacer] of rows) {
+    const style = spacer ? ' style="padding-top:16px"' : '';
+    s += '<tr' + (isSub ? ' class="subtotal"' : '') + '><td' + style + '>' + k + '</td><td' + style + '>' + v + '</td></tr>';
+  }
+  s += '</table><div class="note-box">' + noteText + '</div></div>';
+  return s;
+}
+
+function calculate() {
+  const totalGPUs   = parseInt(document.getElementById('total-gpus').value) || 0;
+  const numNodes    = parseInt(document.getElementById('num-nodes').value) || 0;
+  const gpusPerNode = parseInt(document.getElementById('gpus-per-node').value) || 8;
+  const nicsPerGpu  = parseInt(document.getElementById('nics-per-gpu') ? document.getElementById('nics-per-gpu').value : 1) || 1;
+  const leafRadix   = parseInt(document.getElementById('leaf-radix').value) || 64;
+  const spineRadix  = parseInt(document.getElementById('spine-radix').value) || 64;
+  const planes      = parseInt(document.getElementById('planes').value) || 8;
+  const oversub     = parseFloat(document.getElementById('oversub').value) || 1;
+  const breakout    = parseInt(document.getElementById('breakout') ? document.getElementById('breakout').value : 1) || 1;
+  const spineSpeed  = parseInt(document.getElementById('spine-speed').value) || 800;
+  const hostSpeed   = parseInt(document.getElementById('host-speed').value) || 400;
+  
+  const spareInput  = document.getElementById('spare-pct').value;
+  const sparePct    = spareInput === '' ? 10 : parseInt(spareInput);
+  
+  const tierNum     = parseInt(document.querySelector('input[name=tier]:checked').value);
+  const el          = document.getElementById('results');
+
+  if (!totalGPUs && !numNodes) {
+    el.innerHTML = '<div class="error-msg">Enter the number of GPUs or nodes to get started.</div>';
+    return;
+  }
+
+  // Core capacity calculations
+  const hosts  = numNodes || Math.ceil(totalGPUs / gpusPerNode);
+  const gpus   = totalGPUs || hosts * gpusPerNode;
+  
+  const totalHostLinks = gpus * nicsPerGpu;
+  const linksPerPlane  = Math.ceil(totalHostLinks / planes);
+  const spareM = 1 + sparePct / 100;
+  
+  // Leaf switch topology math
+  const physDownlinks = Math.floor(leafRadix / (1 + oversub));
+  const effDownlinks  = physDownlinks * breakout;
+  const uplinks       = leafRadix - physDownlinks;
+
+  const tierLabels = { 1: 'Single-tier (collapsed spine)', 2: 'Two-tier (leaf-spine)', 3: 'Three-tier (spine-leaf-leaf)' };
+  const tierColors = { 1: 'tier-1', 2: 'tier-2', 3: 'tier-3' };
+
+  let warnHtml = '';
+  if (tierNum === 1 && gpus > 1152)
+    warnHtml = '<div class="warn-box">Your cluster has ' + fmtN(gpus) + ' GPUs — single-tier is typically used up to ~1,152. Results shown as requested; consider two-tier for production.</div>';
+  if (tierNum === 3 && gpus < 10000)
+    warnHtml = '<div class="warn-box">Three-tier is typically used for 74K+ GPU clusters. Two-tier may be simpler and more cost-effective at ' + fmtN(gpus) + ' GPUs.</div>';
+
+  let switchHtml = '', optHtml = '', diagramHtml = '';
+  let totalSpine = 0, totalLeaf = 0;
+
+  // -- Diagram Helpers --
+  const diagHeader = '<div class="diagram-wrapper"><div class="diag-title"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Logical Data Path (Single Node Slice)</div>';
+  const renderBox = (title, sub) => `<div class="diag-box"><div class="diag-box-title">${title}</div><div class="diag-box-sub">${sub}</div></div>`;
+  const renderLink = (label) => `<div class="diag-link"><div class="diag-link-label">${label}</div></div>`;
+
+  const nicsPerNode = gpusPerNode * nicsPerGpu;
+  const nodeBox = renderBox('1× Compute Node', `${gpusPerNode} GPUs · ${nicsPerNode} Backend NICs`);
+  const hostLinkStr = `${nicsPerNode}× ${hostSpeed}G links` + (breakout > 1 ? ` (into ${nicsPerNode/breakout}× switch ports)` : '');
+
+
+  if (tierNum === 1) {
+    const effRadix = spineRadix * breakout;
+    const spinePerPlane = Math.ceil(linksPerPlane / effRadix);
+    totalSpine = spinePerPlane * planes;
+    
+    const hOptSwitchBase = Math.ceil(totalHostLinks / breakout);
+    const hOptHostBase   = totalHostLinks;
+    const hostOptBase    = hOptSwitchBase + hOptHostBase;
+    const hostOptTotal   = Math.ceil(hostOptBase * spareM);
+
+    switchHtml = mkSection(iconServer(), 'Spine switches', [
+      ['Spine radix', spineRadix],
+      ['Spine per plane', spinePerPlane],
+      ['Planes', planes],
+      ['Total spine switches', totalSpine],
+      ['Fabric links per spine', Math.ceil(linksPerPlane / spinePerPlane) + (breakout > 1 ? ` (via ${breakout}:1 breakout)` : '')],
+    ], 'Single tier: GPUs connect directly to spine layer. No leaf layer needed.');
+
+    let optRows = [['Host ↔ spine links', fmtN(totalHostLinks)]];
+    if (breakout === 1) {
+      optRows.push(['Base optics (×2 ends) · ' + opticType(hostSpeed), fmtN(hostOptBase)]);
+    } else {
+      optRows.push(['Switch-end breakout optics (' + breakout + ':1)', fmtN(hOptSwitchBase)]);
+      optRows.push(['Host-end optics · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+    }
+    optRows.push(['Spares (' + sparePct + '%)', '+' + fmtN(hostOptTotal - hostOptBase)]);
+    optRows.push(['Total optics', fmtN(hostOptTotal), true]);
+
+    optHtml = opticsSection(optRows, 'Form factor: ' + opticType(hostSpeed) + '. Includes ' + sparePct + '% spares.');
+
+    // Build Diagram
+    const spineBox = renderBox('1× Spine Switch', `${spineRadix}-port radix`);
+    diagramHtml = diagHeader + nodeBox + renderLink(hostLinkStr) + spineBox + '</div>';
+
+  } else if (tierNum === 2) {
+    const leafPerPlane  = Math.ceil(linksPerPlane / effDownlinks);
+    totalLeaf           = leafPerPlane * planes;
+    const spinePerPlane = Math.ceil((leafPerPlane * uplinks) / spineRadix);
+    totalSpine          = spinePerPlane * planes;
+    
+    const bundleSize    = uplinks / spinePerPlane;
+    const bundleStr     = Number.isInteger(bundleSize) ? bundleSize : bundleSize.toFixed(2) + ' (unbalanced)';
+    
+    const spineLinks    = leafPerPlane * uplinks * planes;
+    const spOptBase     = spineLinks * 2;  
+    const spOptTotal    = Math.ceil(spOptBase * spareM);
+    
+    const hOptSwitchBase= Math.ceil(totalHostLinks / breakout);
+    const hOptHostBase  = totalHostLinks;
+    const hOptBase      = hOptSwitchBase + hOptHostBase;   
+    const hOptTotal     = Math.ceil(hOptBase * spareM);
+
+    let leafNote = 'Each leaf uplinks to all spines in its plane.';
+    if (!Number.isInteger(bundleSize)) {
+      leafNote = '<span style="color:var(--coral600);font-weight:600">Warning:</span> Uplinks do not divide evenly across spines. This topology is unbalanced.';
+    }
+
+    switchHtml  = mkSection(iconServer(), 'Spine layer', [
+      ['Spine radix', spineRadix],
+      ['Spine per plane', spinePerPlane], ['Planes', planes],
+      ['Total spine switches', totalSpine], ['Downlink ports used', Math.floor(leafPerPlane * bundleSize)],
+    ]);
+    switchHtml += mkSection(iconBranch(), 'Leaf layer', [
+      ['Leaf radix', leafRadix],
+      ['Leaf per plane', leafPerPlane], ['Total leaf switches', totalLeaf],
+      ['Host links per leaf', Math.ceil(linksPerPlane / leafPerPlane) + (breakout > 1 ? ` (via ${breakout}:1 breakout)` : '')], 
+      ['Phys downlinks used', physDownlinks],
+      ['Total uplinks used', uplinks],
+      ['Links per spine (bundle)', bundleStr],
+    ], leafNote);
+
+    let optRows = [
+      ['Leaf ↔ spine links', fmtN(spineLinks)],
+      ['Spine-tier optics (×2) · ' + opticType(spineSpeed), fmtN(spOptBase)],
+      ['Spares (' + sparePct + '%)', '+' + fmtN(spOptTotal - spOptBase)],
+      ['Spine-tier subtotal', fmtN(spOptTotal), true],
+      ['Host ↔ leaf links', fmtN(totalHostLinks), false, true]
+    ];
+    if (breakout === 1) {
+      optRows.push(['Host-tier optics (×2) · ' + opticType(hostSpeed), fmtN(hOptBase)]);
+    } else {
+      optRows.push(['Switch-end breakout optics (' + breakout + ':1)', fmtN(hOptSwitchBase)]);
+      optRows.push(['Host-end optics · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+    }
+    optRows.push(['Spares (' + sparePct + '%)', '+' + fmtN(hOptTotal - hOptBase)]);
+    optRows.push(['Host-tier subtotal', fmtN(hOptTotal), true]);
+    optRows.push(['Grand total optics', fmtN(spOptTotal + hOptTotal), true]);
+
+    optHtml = opticsSection(optRows, 'Spine links: ' + opticType(spineSpeed) + ' · Host links: ' + opticType(hostSpeed) + '. Includes ' + sparePct + '% spares.');
+
+    // Build Diagram
+    const leafBox = renderBox('1× Leaf Switch', `${leafRadix}-port radix`);
+    const spineBox = renderBox('1× Spine Switch', `${spineRadix}-port radix`);
+    const uplinksStr = `${Number.isInteger(bundleSize) ? bundleSize : bundleSize.toFixed(1)}× ${spineSpeed}G uplinks`;
+    diagramHtml = diagHeader + nodeBox + renderLink(hostLinkStr) + leafBox + renderLink(uplinksStr) + spineBox + '</div>';
+
+  } else {
+    const leaf2PerPlane = Math.ceil(linksPerPlane / effDownlinks);
+    const totalLeaf2    = leaf2PerPlane * planes;
+    
+    const a2sDownlinksNeeded = leaf2PerPlane * uplinks;
+    const leaf1PerPlane = Math.ceil(a2sDownlinksNeeded / physDownlinks);
+    const totalLeaf1    = leaf1PerPlane * planes;
+    
+    const spinePortsNeeded = leaf1PerPlane * uplinks;
+    const spinePerPlane = Math.ceil(spinePortsNeeded / spineRadix);
+    totalSpine          = spinePerPlane * planes;
+    
+    const e2aBundle     = uplinks / leaf1PerPlane;
+    const e2aBundleStr  = Number.isInteger(e2aBundle) ? e2aBundle : e2aBundle.toFixed(2) + ' (unbalanced)';
+    
+    const a2sBundle     = uplinks / spinePerPlane;
+    const a2sBundleStr  = Number.isInteger(a2sBundle) ? a2sBundle : a2sBundle.toFixed(2) + ' (unbalanced)';
+
+    totalLeaf           = totalLeaf1 + totalLeaf2;
+    
+    const e2aLinks      = leaf2PerPlane * uplinks * planes;
+    const a2sLinks      = leaf1PerPlane * uplinks * planes;
+    
+    const a2sBase       = a2sLinks*2; 
+    const a2sTotal      = Math.ceil(a2sBase*spareM);
+    const e2aBase       = e2aLinks*2; 
+    const e2aTotal      = Math.ceil(e2aBase*spareM);
+    
+    const hOptSwitchBase= Math.ceil(totalHostLinks / breakout);
+    const hOptHostBase  = totalHostLinks;
+    const hBase         = hOptSwitchBase + hOptHostBase;
+    const hTotal        = Math.ceil(hBase*spareM);
+
+    switchHtml  = mkSection(iconServer(), 'Spine layer', [
+      ['Spine radix', spineRadix],
+      ['Spine per plane', spinePerPlane], ['Total spine switches', totalSpine],
+    ]);
+    switchHtml += mkSection(iconBranch(), 'Aggregation leaf (tier 2)', [
+      ['Leaf radix', leafRadix],
+      ['Agg leaf per plane', leaf1PerPlane], ['Total agg leaves', totalLeaf1],
+      ['Links per spine (bundle)', a2sBundleStr],
+    ]);
+    switchHtml += mkSection(iconBranch(), 'Edge leaf (tier 1)', [
+      ['Leaf radix', leafRadix],
+      ['Edge leaf per plane', leaf2PerPlane], ['Total edge leaves', totalLeaf2],
+      ['Host links per edge', Math.ceil(linksPerPlane / leaf2PerPlane) + (breakout > 1 ? ` (via ${breakout}:1)` : '')],
+      ['Links per agg leaf (bundle)', e2aBundleStr],
+    ], 'Three-tier Clos scale-out topology.');
+
+    let optRows = [
+      ['Agg leaf ↔ spine links', fmtN(a2sLinks)],
+      ['Spine-tier optics (×2) · ' + opticType(spineSpeed), fmtN(a2sBase)],
+      ['Spares (' + sparePct + '%)', '+' + fmtN(a2sTotal - a2sBase)],
+      ['Spine-tier subtotal', fmtN(a2sTotal), true],
+      ['Edge leaf ↔ agg leaf links', fmtN(e2aLinks), false, true],
+      ['Agg-tier optics (×2) · ' + opticType(spineSpeed), fmtN(e2aBase)],
+      ['Spares (' + sparePct + '%)', '+' + fmtN(e2aTotal - e2aBase)],
+      ['Agg-tier subtotal', fmtN(e2aTotal), true],
+      ['Host ↔ edge leaf links', fmtN(totalHostLinks), false, true]
+    ];
+    
+    if (breakout === 1) {
+      optRows.push(['Host-tier optics (×2) · ' + opticType(hostSpeed), fmtN(hBase)]);
+    } else {
+      optRows.push(['Switch-end breakout optics (' + breakout + ':1)', fmtN(hOptSwitchBase)]);
+      optRows.push(['Host-end optics · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+    }
+    optRows.push(['Spares (' + sparePct + '%)', '+' + fmtN(hTotal - hBase)]);
+    optRows.push(['Host-tier subtotal', fmtN(hTotal), true]);
+    optRows.push(['Grand total optics', fmtN(a2sTotal + e2aTotal + hTotal), true]);
+
+    optHtml = opticsSection(optRows, 'Spine/agg links: ' + opticType(spineSpeed) + ' · Host links: ' + opticType(hostSpeed) + '. Includes ' + sparePct + '% spares.');
+
+    // Build Diagram
+    const leaf2Box = renderBox('1× Edge Leaf Switch', `${leafRadix}-port radix`);
+    const leaf1Box = renderBox('1× Agg Leaf Switch', `${leafRadix}-port radix`);
+    const spineBox = renderBox('1× Spine Switch', `${spineRadix}-port radix`);
+    const e2aStr = `${Number.isInteger(e2aBundle) ? e2aBundle : e2aBundle.toFixed(1)}× ${spineSpeed}G links`;
+    const a2sStr = `${Number.isInteger(a2sBundle) ? a2sBundle : a2sBundle.toFixed(1)}× ${spineSpeed}G links`;
+
+    diagramHtml = diagHeader + nodeBox + renderLink(hostLinkStr) + leaf2Box + renderLink(e2aStr) + leaf1Box + renderLink(a2sStr) + spineBox + '</div>';
+  }
+
+  const totalSwitches = totalSpine + totalLeaf;
+  let out = warnHtml;
+  out += '<div class="tier-badge ' + tierColors[tierNum] + '">' + tierLabels[tierNum] + '</div>';
+  out += '<div class="metrics-grid">';
+  out += metric(fmtN(gpus),          'Total GPUs',     '');
+  out += metric(fmtN(totalHostLinks),'Backend NICs',   nicsPerGpu + ' per GPU');
+  out += metric(fmtN(totalSpine),    'Spine switches', 'across planes');
+  out += metric(totalLeaf > 0 ? fmtN(totalLeaf) : '—', 'Leaf switches', totalLeaf > 0 ? 'across planes' : 'not needed');
+  out += metric(fmtN(totalSwitches), 'Total switches', 'all tiers');
+  out += '</div>';
+  out += switchHtml + diagramHtml + optHtml;
+  el.innerHTML = out;
+}
+</script>
+</body>
+</html>
