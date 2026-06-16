@@ -436,6 +436,42 @@ function toggleCustomRadix(role) {
   custom.style.display = select.value === 'other' ? 'inline-block' : 'none';
 }
 
+function minPlatformForPorts(portsNeeded) {
+  return PLATFORMS.find(p => p.radix >= portsNeeded) || null;
+}
+
+function minBalanced2Tier(linksPerPlane, breakout, oversub) {
+  for (const lp of PLATFORMS) {
+    const physDown = Math.floor(lp.radix * oversub / (1 + oversub));
+    const effDown  = physDown * breakout;
+    const up       = lp.radix - physDown;
+    if (effDown <= 0 || up <= 0) continue;
+    const leafPP = Math.ceil(linksPerPlane / effDown);
+    for (const sp of PLATFORMS) {
+      const spinePP = Math.ceil((leafPP * up) / sp.radix);
+      if (spinePP <= up && up % spinePP === 0) return { leaf: lp, spine: sp };
+    }
+  }
+  return null;
+}
+
+function minBalanced3Tier(linksPerPlane, breakout, oversub) {
+  for (const lp of PLATFORMS) {
+    const physDown = Math.floor(lp.radix * oversub / (1 + oversub));
+    const effDown  = physDown * breakout;
+    const up       = lp.radix - physDown;
+    if (effDown <= 0 || up <= 0) continue;
+    const l2PP = Math.ceil(linksPerPlane / effDown);
+    const l1PP = Math.ceil((l2PP * up) / physDown);
+    if (l1PP > up || up % l1PP !== 0) continue;
+    for (const sp of PLATFORMS) {
+      const spinePP = Math.ceil((l1PP * up) / sp.radix);
+      if (spinePP <= up && up % spinePP === 0) return { leaf: lp, spine: sp };
+    }
+  }
+  return null;
+}
+
 function getRadix(role) {
   const select = document.getElementById(role + '-radix');
   if (select.value === 'other') {
@@ -446,7 +482,6 @@ function getRadix(role) {
 
 function autoSelectPlatforms() {
   const tierNum = parseInt(document.querySelector('input[name=tier]:checked').value);
-  if (tierNum === 1) return;
 
   const totalGPUs   = parseInt(document.getElementById('total-gpus').value) || 0;
   const numNodes    = parseInt(document.getElementById('num-nodes').value) || 0;
@@ -462,7 +497,9 @@ function autoSelectPlatforms() {
   const totalHostLinks = gpus * linksPerGpu;
   const linksPerPlane  = Math.ceil(totalHostLinks / planes);
 
-  if (tierNum === 2) {
+  if (tierNum === 1) {
+    autoSelect1Tier(linksPerPlane, breakout);
+  } else if (tierNum === 2) {
     autoSelect2Tier(linksPerPlane, breakout);
   } else {
     autoSelect3Tier(linksPerPlane, breakout);
@@ -475,6 +512,20 @@ function setPlatformSelection(leafRadix, spineRadix) {
   leafSelect.value  = leafRadix;
   spineSelect.value = spineRadix;
   document.getElementById('leaf-radix-custom').style.display = 'none';
+  document.getElementById('spine-radix-custom').style.display = 'none';
+}
+
+function autoSelect1Tier(linksPerPlane, breakout) {
+  const portsNeeded = Math.ceil(linksPerPlane / breakout);
+  const spineSelect = document.getElementById('spine-radix');
+  for (const p of PLATFORMS) {
+    if (p.radix >= portsNeeded) {
+      spineSelect.value = p.radix;
+      document.getElementById('spine-radix-custom').style.display = 'none';
+      return;
+    }
+  }
+  spineSelect.value = PLATFORMS[PLATFORMS.length - 1].radix;
   document.getElementById('spine-radix-custom').style.display = 'none';
 }
 
@@ -538,8 +589,8 @@ function updateTierHint() {
 
   if (t === '1') {
     leafRow.style.display = 'none';
-    spineRow.style.display = 'none';
-    portsRow.style.display = 'flex';
+    spineRow.style.display = 'flex';
+    portsRow.style.display = 'none';
     spineSpeedRow.style.display = 'none';
   } else {
     leafRow.style.display = 'flex';
@@ -624,11 +675,11 @@ function calculate() {
 
   // Determine physical radix based on tier type
   let leafRadix = 64, spineRadix = 64;
-  let linecardPorts = 36;
   let leafPlatform = null, spinePlatform = null;
 
   if (tierNum === 1) {
-    linecardPorts = parseInt(document.getElementById('linecard-ports').value) || 36;
+    spineRadix = getRadix('spine');
+    spinePlatform = getPlatformByRadix(spineRadix);
   } else {
     leafRadix = getRadix('leaf');
     spineRadix = getRadix('spine');
@@ -652,10 +703,33 @@ function calculate() {
   const tierColors = { 1: 'tier-1', 2: 'tier-2', 3: 'tier-3' };
 
   let warnHtml = '';
+
+  // Tier-appropriate GPU count warnings
   if (tierNum === 1 && gpus > 1152)
-    warnHtml = '<div class="warn-box">Your cluster has ' + fmtN(gpus) + ' GPUs — single-tier is typically used up to ~1,152. Results shown as requested; consider two-tier for production.</div>';
+    warnHtml += '<div class="warn-box">Your cluster has ' + fmtN(gpus) + ' GPUs — single-tier is typically used up to ~1,152. Results shown as requested; consider two-tier for production.</div>';
   if (tierNum === 3 && gpus < 10000)
-    warnHtml = '<div class="warn-box">Three-tier is typically used for 74K+ GPU clusters. Two-tier may be simpler and more cost-effective at ' + fmtN(gpus) + ' GPUs.</div>';
+    warnHtml += '<div class="warn-box">Three-tier is typically used for 74K+ GPU clusters. Two-tier may be simpler and more cost-effective at ' + fmtN(gpus) + ' GPUs.</div>';
+
+  // Validate leaf downlinks/uplinks for tier 2 & 3
+  if (tierNum >= 2) {
+    if (physDownlinks <= 0) {
+      el.innerHTML = '<div class="error-msg">Invalid configuration: the downlink:uplink ratio (' + oversub +
+        ') leaves zero downlink ports on a ' + leafRadix + '-port leaf. Increase the ratio or choose a larger leaf switch.</div>';
+      return;
+    }
+    if (uplinks <= 0) {
+      el.innerHTML = '<div class="error-msg">Invalid configuration: the downlink:uplink ratio (' + oversub +
+        ') leaves zero uplink ports on a ' + leafRadix + '-port leaf. Decrease the ratio or choose a larger leaf switch.</div>';
+      return;
+    }
+    if (effDownlinks <= 0) {
+      el.innerHTML = '<div class="error-msg">Invalid configuration: effective downlinks per leaf is zero. Check breakout and downlink:uplink settings.</div>';
+      return;
+    }
+    if (uplinks < 2) {
+      warnHtml += '<div class="warn-box">Only ' + uplinks + ' uplink(s) per leaf — this limits spine redundancy. Consider a larger leaf switch or adjusting the downlink:uplink ratio.</div>';
+    }
+  }
 
   let switchHtml = '', optHtml = '', diagramHtml = '';
   let totalSpine = 0, totalLeaf = 0;
@@ -670,35 +744,56 @@ function calculate() {
   const hostLinkStr = `${linksPerNode}× ${hostSpeed}G links` + (breakout > 1 ? ` (into ${linksPerNode/breakout}× switch ports)` : '');
 
   if (tierNum === 1) {
-    const effPortsPerCard = linecardPorts * breakout;
-    const cardsNeededPerPlane = Math.ceil(linksPerPlane / effPortsPerCard);
-    
-    let chassisSize;
-    if (cardsNeededPerPlane <= 4) chassisSize = 4;
-    else if (cardsNeededPerPlane <= 8) chassisSize = 8;
-    else if (cardsNeededPerPlane <= 12) chassisSize = 12;
-    else if (cardsNeededPerPlane <= 16) chassisSize = 16;
-    else chassisSize = 'Multiple chassis (exceeds max 16 slots)';
+    totalSpine = planes;
+    const portsNeeded = Math.ceil(linksPerPlane / breakout);
 
-    if (chassisSize === 'Multiple chassis (exceeds max 16 slots)') {
-      warnHtml = '<div class="warn-box">Your required connections exceed the capacity of a single 16-slot chassis per plane. Consider moving to a two-tier architecture.</div>';
+    if (spinePlatform.type === 'chassis') {
+      const portsPerSlot = spinePlatform.portsPerSlot || 36;
+      const cardsNeeded  = Math.ceil(portsNeeded / portsPerSlot);
+
+      if (cardsNeeded > spinePlatform.slots) {
+        const minP = minPlatformForPorts(portsNeeded);
+        const suggestion = minP ? ' Minimum switch required: <strong>' + minP.desc + '</strong>.' : ' No single switch can fit — move to a two-tier architecture.';
+        el.innerHTML = '<div class="error-msg">Required line cards (' + cardsNeeded + ') exceed ' + spinePlatform.name +
+          ' capacity (' + spinePlatform.slots + ' slots).' + suggestion + '</div>';
+        return;
+      }
+
+      switchHtml = mkSection(iconServer(), 'Modular Spine (Collapsed)', [
+        ['Platform', spinePlatform.desc],
+        ['Line cards required', cardsNeeded + ' per plane'],
+        ['Chassis slots', spinePlatform.slots],
+        ['Planes', planes],
+        ['Total chassis', totalSpine],
+        ['Physical ports used', portsNeeded + ' per plane'],
+      ], 'Single tier: GPUs connect directly to the chassis spine.');
+
+      const spineBox = renderBox('1× ' + spinePlatform.name, portsNeeded + ' ports used<br><span style="font-size:12px;opacity:0.8;margin-top:6px;display:block">Populated with ' + cardsNeeded + '× ' + portsPerSlot + '-port line cards</span>');
+      diagramHtml = diagHeader + nodeBox + renderLink(hostLinkStr) + spineBox + '</div>';
+
+    } else {
+      if (portsNeeded > spineRadix) {
+        const minP = minPlatformForPorts(portsNeeded);
+        const suggestion = minP ? ' Minimum switch required: <strong>' + minP.desc + '</strong>.' : ' No single switch can fit — move to a two-tier architecture.';
+        el.innerHTML = '<div class="error-msg">Required ports (' + portsNeeded + ') exceed ' + spinePlatform.desc +
+          ' capacity (' + spineRadix + ' ports).' + suggestion + '</div>';
+        return;
+      }
+
+      switchHtml = mkSection(iconServer(), 'Spine (Collapsed)', [
+        ['Platform', spinePlatform.desc],
+        ['Ports used', portsNeeded + ' of ' + spineRadix],
+        ['Planes', planes],
+        ['Total switches', totalSpine],
+      ], 'Single tier: GPUs connect directly to the spine switch.');
+
+      const spineBox = renderBox('1× ' + spinePlatform.name, spineRadix + '-port<br>' + portsNeeded + ' ports used');
+      diagramHtml = diagHeader + nodeBox + renderLink(hostLinkStr) + spineBox + '</div>';
     }
-
-    // In a single-tier modular design, you typically have exactly 1 modular chassis per plane
-    totalSpine = planes; 
-    const spinePortsUsed = Math.ceil(linksPerPlane / breakout);
 
     const hOptSwitchBase = Math.ceil(totalHostLinks / breakout);
     const hOptHostBase   = totalHostLinks;
     const hostOptBase    = hOptSwitchBase + hOptHostBase;
-
-    switchHtml = mkSection(iconServer(), 'Modular Spine (Collapsed)', [
-      ['Line cards required', `${cardsNeededPerPlane} per plane`],
-      ['Chassis required', chassisSize === 'Multiple chassis (exceeds max 16 slots)' ? chassisSize : `${chassisSize}-slot chassis`],
-      ['Planes', planes],
-      ['Total chassis count', totalSpine],
-      ['Physical ports used', `${spinePortsUsed} per plane`],
-    ], 'Single tier: GPUs connect directly to spine layer. Chassis is auto-sized based on required ports.');
 
     let optRows = [['Host ↔ spine links', fmtN(totalHostLinks)]];
     if (breakout === 1) {
@@ -710,13 +805,6 @@ function calculate() {
     optRows.push(['Total optics', fmtN(hostOptBase), true]);
 
     optHtml = opticsSection(optRows, 'Host links: ' + opticType(hostSpeed) + '.');
-
-    // Build Diagram for auto-sized modular chassis
-    let spineTitle = chassisSize === 'Multiple chassis (exceeds max 16 slots)' ? 'Exceeds Single Chassis' : `1× 7800R4 ${chassisSize}-slot`;
-    let spineSub = `${spinePortsUsed} physical ports used<br><span style="font-size:12px;opacity:0.8;margin-top:6px;display:block">Populated with ${cardsNeededPerPlane}× ${linecardPorts}-port line cards</span>`;
-    
-    const spineBox = renderBox(spineTitle, spineSub);
-    diagramHtml = diagHeader + nodeBox + renderLink(hostLinkStr) + spineBox + '</div>';
 
   } else if (tierNum === 2) {
     const leafPerPlane  = Math.ceil(linksPerPlane / effDownlinks);
@@ -735,15 +823,20 @@ function calculate() {
     const hOptBase      = hOptSwitchBase + hOptHostBase;   
 
     if (bundleSize < 1) {
+      const minCombo = minBalanced2Tier(linksPerPlane, breakout, oversub);
+      let suggestion = '';
+      if (minCombo) suggestion = ' Minimum balanced topology: leaf <strong>' + minCombo.leaf.desc + '</strong>, spine <strong>' + minCombo.spine.desc + '</strong>.';
       el.innerHTML = '<div class="error-msg">Invalid topology: uplink bundle size is ' + bundleSize.toFixed(2) +
-        ' (must be ≥ 1). The selected leaf (' + leafPlatform.desc + ') cannot support this cluster size.' +
-        ' Try a larger leaf/spine platform or increase the number of planes.</div>';
+        ' (must be ≥ 1). The selected leaf (' + leafPlatform.desc + ') cannot support this cluster size.' + suggestion + '</div>';
       return;
     }
 
     let leafNote = 'Each leaf uplinks to all spines in its plane.';
     if (!Number.isInteger(bundleSize)) {
-      leafNote = '<span style="color:var(--coral600);font-weight:600">Warning:</span> Uplinks do not divide evenly across spines. This topology is unbalanced.';
+      const minCombo = minBalanced2Tier(linksPerPlane, breakout, oversub);
+      let suggestion = '';
+      if (minCombo) suggestion = ' Minimum balanced topology: leaf <strong>' + minCombo.leaf.desc + '</strong>, spine <strong>' + minCombo.spine.desc + '</strong>.';
+      leafNote = '<span style="color:var(--coral600);font-weight:600">Warning:</span> Uplinks do not divide evenly across spines (' + bundleSize.toFixed(2) + ' links per spine). This topology is unbalanced.' + suggestion;
     }
 
     switchHtml  = mkSection(iconServer(), 'Spine layer', [
@@ -821,10 +914,24 @@ function calculate() {
 
     if (e2aBundle < 1 || a2sBundle < 1) {
       const badBundle = e2aBundle < 1 ? 'edge-to-agg (' + e2aBundle.toFixed(2) + ')' : 'agg-to-spine (' + a2sBundle.toFixed(2) + ')';
+      const minCombo = minBalanced3Tier(linksPerPlane, breakout, oversub);
+      let suggestion = '';
+      if (minCombo) suggestion = ' Minimum balanced topology: leaf <strong>' + minCombo.leaf.desc + '</strong>, spine <strong>' + minCombo.spine.desc + '</strong>.';
       el.innerHTML = '<div class="error-msg">Invalid topology: ' + badBundle + ' bundle size is below 1.' +
-        ' The selected platforms cannot support this cluster size.' +
-        ' Try larger platforms or increase the number of planes.</div>';
+        ' The selected platforms cannot support this cluster size.' + suggestion + '</div>';
       return;
+    }
+
+    if (!Number.isInteger(e2aBundle) || !Number.isInteger(a2sBundle)) {
+      const minCombo = minBalanced3Tier(linksPerPlane, breakout, oversub);
+      let suggestion = '';
+      if (minCombo) suggestion = ' Minimum balanced topology: leaf <strong>' + minCombo.leaf.desc + '</strong>, spine <strong>' + minCombo.spine.desc + '</strong>.';
+      if (!Number.isInteger(e2aBundle)) {
+        warnHtml += '<div class="warn-box">Edge-to-agg uplinks (' + e2aBundle.toFixed(2) + ') do not divide evenly — this topology is unbalanced at the aggregation layer.' + suggestion + '</div>';
+      }
+      if (!Number.isInteger(a2sBundle)) {
+        warnHtml += '<div class="warn-box">Agg-to-spine uplinks (' + a2sBundle.toFixed(2) + ') do not divide evenly — this topology is unbalanced at the spine layer.' + suggestion + '</div>';
+      }
     }
 
     switchHtml  = mkSection(iconServer(), 'Spine layer', [
