@@ -100,10 +100,10 @@
   .input-row label { font-size: 14px; font-weight: 500; color: var(--text2); min-width: 180px; }
   .input-row input, .input-row select {
     font-family: inherit;
-    font-size: 14px; 
-    padding: 9px 12px; 
-    border-radius: var(--radius); 
-    width: 140px;
+    font-size: 14px;
+    padding: 9px 12px;
+    border-radius: var(--radius);
+    width: 220px;
     border: 1px solid var(--border2); 
     background: var(--bg2); 
     color: var(--text);
@@ -284,7 +284,7 @@
     </div>
     <div class="input-row">
       <label>Links per GPU</label>
-      <input type="number" id="links-per-gpu" min="1" value="1">
+      <input type="number" id="links-per-gpu" min="1" value="1" oninput="autoSelectPlatforms()">
       <span class="hint">e.g. 1 (standard) or 2</span>
     </div>
   </div>
@@ -324,35 +324,37 @@
     <p class="section-label">Switch configuration</p>
     
     <div class="input-row" id="leaf-radix-row">
-      <label>Leaf switch radix</label>
-      <input type="number" id="leaf-radix" min="16" max="128" value="64" step="16">
-      <span class="hint">ports per leaf</span>
+      <label>Leaf switch</label>
+      <select id="leaf-radix" onchange="toggleCustomRadix('leaf')"></select>
+      <input type="number" id="leaf-radix-custom" min="2" max="1024" step="2" placeholder="ports" style="display:none; width:80px">
+      <span class="hint">Arista 800G platform</span>
     </div>
     <div class="input-row" id="spine-radix-row">
-      <label>Spine switch radix</label>
-      <input type="number" id="spine-radix" min="16" max="512" value="64" step="16">
-      <span class="hint">ports per spine</span>
+      <label>Spine switch</label>
+      <select id="spine-radix" onchange="toggleCustomRadix('spine')"></select>
+      <input type="number" id="spine-radix-custom" min="2" max="1024" step="2" placeholder="ports" style="display:none; width:80px">
+      <span class="hint">Arista 800G platform</span>
     </div>
 
     <div class="input-row" id="single-tier-ports-row" style="display:none">
       <label>Ports per line card</label>
-      <input type="number" id="linecard-ports" min="16" max="128" value="36" step="4">
+      <input type="number" id="linecard-ports" min="16" max="36" value="36" step="4">
       <span class="hint">e.g. 36 for OSFP 800G</span>
     </div>
 
     <div class="input-row">
       <label>Planes</label>
-      <input type="number" id="planes" min="1" max="8" value="1">
+      <input type="number" id="planes" min="1" max="8" value="1" oninput="autoSelectPlatforms()">
       <span class="hint">redundant fabrics</span>
     </div>
     <div class="input-row">
-      <label>Oversubscription</label>
-      <input type="number" id="oversub" min="1" max="4" step="0.5" value="1">
-      <span class="hint">1 = non-blocking</span>
+      <label>Downlink:Uplink ratio</label>
+      <input type="number" id="oversub" min="0.25" max="4" step="0.25" value="1">
+      <span class="hint">1 = non-blocking, &lt;1 = more uplinks</span>
     </div>
     <div class="input-row">
       <label>Host port breakout</label>
-      <select id="breakout">
+      <select id="breakout" onchange="autoSelectPlatforms()">
         <option value="1">1:1 (None)</option>
         <option value="2" selected>1:2 (e.g. 800G → 2x 400G)</option>
         <option value="4">1:4 (e.g. 800G → 4x 200G)</option>
@@ -398,6 +400,132 @@ const TIER_HINTS = {
   '3': 'Three-tier Clos — hyperscale fabric for very large clusters. Pod-based for blast-radius containment.'
 };
 
+const PLATFORMS = [
+  { name: '7060X6',        radix: 32,  type: 'fixed',   desc: '7060X6 (32-port)' },
+  { name: '7700R4',        radix: 38,  type: 'fixed',   desc: '7700R4 (38-port)' },
+  { name: '7060X6',        radix: 64,  type: 'fixed',   desc: '7060X6 (64-port)' },
+  { name: '7700R4',        radix: 128, type: 'fixed',   desc: '7700R4 (128-port)' },
+  { name: '7800R4 4-slot', radix: 144, type: 'chassis', desc: '7800R4 4-slot (144-port)',  slots: 4,  portsPerSlot: 36 },
+  { name: '7800R4 8-slot', radix: 288, type: 'chassis', desc: '7800R4 8-slot (288-port)',  slots: 8,  portsPerSlot: 36 },
+  { name: '7800R4 12-slot',radix: 432, type: 'chassis', desc: '7800R4 12-slot (432-port)', slots: 12, portsPerSlot: 36 },
+  { name: '7800R4 16-slot',radix: 576, type: 'chassis', desc: '7800R4 16-slot (576-port)', slots: 16, portsPerSlot: 36 },
+];
+
+function getPlatformByRadix(radix) {
+  return PLATFORMS.find(p => p.radix === radix) || { name: 'Custom', radix, desc: radix + '-port' };
+}
+
+function populateDropdowns() {
+  const leafSelect  = document.getElementById('leaf-radix');
+  const spineSelect = document.getElementById('spine-radix');
+  leafSelect.innerHTML = '';
+  spineSelect.innerHTML = '';
+  for (const p of PLATFORMS) {
+    leafSelect.appendChild(new Option(p.desc, p.radix));
+    spineSelect.appendChild(new Option(p.desc, p.radix));
+  }
+  leafSelect.appendChild(new Option('Other (custom)', 'other'));
+  spineSelect.appendChild(new Option('Other (custom)', 'other'));
+  leafSelect.value  = '64';
+  spineSelect.value = '64';
+}
+
+function toggleCustomRadix(role) {
+  const select = document.getElementById(role + '-radix');
+  const custom = document.getElementById(role + '-radix-custom');
+  custom.style.display = select.value === 'other' ? 'inline-block' : 'none';
+}
+
+function getRadix(role) {
+  const select = document.getElementById(role + '-radix');
+  if (select.value === 'other') {
+    return parseInt(document.getElementById(role + '-radix-custom').value) || 64;
+  }
+  return parseInt(select.value) || 64;
+}
+
+function autoSelectPlatforms() {
+  const tierNum = parseInt(document.querySelector('input[name=tier]:checked').value);
+  if (tierNum === 1) return;
+
+  const totalGPUs   = parseInt(document.getElementById('total-gpus').value) || 0;
+  const numNodes    = parseInt(document.getElementById('num-nodes').value) || 0;
+  const gpusPerNode = parseInt(document.getElementById('gpus-per-node').value) || 8;
+  const linksPerGpu = parseInt(document.getElementById('links-per-gpu').value) || 1;
+  const planes      = parseInt(document.getElementById('planes').value) || 1;
+  const breakout    = parseInt(document.getElementById('breakout').value) || 1;
+
+  const hosts = numNodes || Math.ceil(totalGPUs / gpusPerNode);
+  const gpus  = totalGPUs || hosts * gpusPerNode;
+  if (gpus <= 0) return;
+
+  const totalHostLinks = gpus * linksPerGpu;
+  const linksPerPlane  = Math.ceil(totalHostLinks / planes);
+
+  if (tierNum === 2) {
+    autoSelect2Tier(linksPerPlane, breakout);
+  } else {
+    autoSelect3Tier(linksPerPlane, breakout);
+  }
+}
+
+function setPlatformSelection(leafRadix, spineRadix) {
+  const leafSelect  = document.getElementById('leaf-radix');
+  const spineSelect = document.getElementById('spine-radix');
+  leafSelect.value  = leafRadix;
+  spineSelect.value = spineRadix;
+  document.getElementById('leaf-radix-custom').style.display = 'none';
+  document.getElementById('spine-radix-custom').style.display = 'none';
+}
+
+function autoSelect2Tier(linksPerPlane, breakout) {
+  for (const lp of PLATFORMS) {
+    const physDown = Math.floor(lp.radix / 2);
+    const effDown  = physDown * breakout;
+    const uplinks  = lp.radix - physDown;
+    if (effDown <= 0 || uplinks <= 0) continue;
+
+    const leafPerPlane = Math.ceil(linksPerPlane / effDown);
+
+    for (const sp of PLATFORMS) {
+      const spinePerPlane = Math.ceil((leafPerPlane * uplinks) / sp.radix);
+      if (spinePerPlane <= uplinks && uplinks % spinePerPlane === 0) {
+        setPlatformSelection(lp.radix, sp.radix);
+        return;
+      }
+    }
+  }
+
+  setPlatformSelection(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
+}
+
+function autoSelect3Tier(linksPerPlane, breakout) {
+  for (const lp of PLATFORMS) {
+    const physDown = Math.floor(lp.radix / 2);
+    const effDown  = physDown * breakout;
+    const uplinks  = lp.radix - physDown;
+    if (effDown <= 0 || uplinks <= 0) continue;
+
+    const leaf2PerPlane = Math.ceil(linksPerPlane / effDown);
+    const a2sDownlinks  = leaf2PerPlane * uplinks;
+    const leaf1PerPlane = Math.ceil(a2sDownlinks / physDown);
+
+    if (leaf1PerPlane > uplinks || uplinks % leaf1PerPlane !== 0) continue;
+
+    const spinePortsNeeded = leaf1PerPlane * uplinks;
+
+    for (const sp of PLATFORMS) {
+      const spinePerPlane = Math.ceil(spinePortsNeeded / sp.radix);
+      if (spinePerPlane <= uplinks && uplinks % spinePerPlane === 0) {
+        setPlatformSelection(lp.radix, sp.radix);
+        return;
+      }
+    }
+  }
+
+  setPlatformSelection(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
+}
+
 function updateTierHint() {
   const t = document.querySelector('input[name=tier]:checked').value;
   document.getElementById('tier-hint').textContent = TIER_HINTS[t];
@@ -419,21 +547,26 @@ function updateTierHint() {
     portsRow.style.display = 'none';
     spineSpeedRow.style.display = 'flex';
   }
+  autoSelectPlatforms();
 }
 
-// Run on page load to set correct visibility
-window.addEventListener('DOMContentLoaded', updateTierHint);
+window.addEventListener('DOMContentLoaded', () => {
+  populateDropdowns();
+  updateTierHint();
+});
 
 function syncFromTotal() {
   const g = parseInt(document.getElementById('total-gpus').value) || 0;
   const gpn = parseInt(document.getElementById('gpus-per-node').value) || 8;
   if (g > 0) document.getElementById('num-nodes').value = Math.ceil(g / gpn);
+  autoSelectPlatforms();
 }
 
 function syncFromNodes() {
   const n = parseInt(document.getElementById('num-nodes').value) || 0;
   const gpn = parseInt(document.getElementById('gpus-per-node').value) || 8;
   if (n > 0) document.getElementById('total-gpus').value = n * gpn;
+  autoSelectPlatforms();
 }
 
 function opticType(speed) {
@@ -492,12 +625,15 @@ function calculate() {
   // Determine physical radix based on tier type
   let leafRadix = 64, spineRadix = 64;
   let linecardPorts = 36;
-  
+  let leafPlatform = null, spinePlatform = null;
+
   if (tierNum === 1) {
     linecardPorts = parseInt(document.getElementById('linecard-ports').value) || 36;
   } else {
-    leafRadix = parseInt(document.getElementById('leaf-radix').value) || 64;
-    spineRadix = parseInt(document.getElementById('spine-radix').value) || 64;
+    leafRadix = getRadix('leaf');
+    spineRadix = getRadix('spine');
+    leafPlatform = getPlatformByRadix(leafRadix);
+    spinePlatform = getPlatformByRadix(spineRadix);
   }
 
   // Core capacity calculations
@@ -508,7 +644,7 @@ function calculate() {
   const linksPerPlane  = Math.ceil(totalHostLinks / planes);
   
   // Leaf switch topology math
-  const physDownlinks = Math.floor(leafRadix / (1 + oversub));
+  const physDownlinks = Math.floor(leafRadix * oversub / (1 + oversub));
   const effDownlinks  = physDownlinks * breakout;
   const uplinks       = leafRadix - physDownlinks;
 
@@ -576,7 +712,7 @@ function calculate() {
     optHtml = opticsSection(optRows, 'Host links: ' + opticType(hostSpeed) + '.');
 
     // Build Diagram for auto-sized modular chassis
-    let spineTitle = chassisSize === 'Multiple chassis (exceeds max 16 slots)' ? 'Exceeds Single Chassis' : `1× ${chassisSize}-slot Modular Spine Switch`;
+    let spineTitle = chassisSize === 'Multiple chassis (exceeds max 16 slots)' ? 'Exceeds Single Chassis' : `1× 7800R4 ${chassisSize}-slot`;
     let spineSub = `${spinePortsUsed} physical ports used<br><span style="font-size:12px;opacity:0.8;margin-top:6px;display:block">Populated with ${cardsNeededPerPlane}× ${linecardPorts}-port line cards</span>`;
     
     const spineBox = renderBox(spineTitle, spineSub);
@@ -598,20 +734,27 @@ function calculate() {
     const hOptHostBase  = totalHostLinks;
     const hOptBase      = hOptSwitchBase + hOptHostBase;   
 
+    if (bundleSize < 1) {
+      el.innerHTML = '<div class="error-msg">Invalid topology: uplink bundle size is ' + bundleSize.toFixed(2) +
+        ' (must be ≥ 1). The selected leaf (' + leafPlatform.desc + ') cannot support this cluster size.' +
+        ' Try a larger leaf/spine platform or increase the number of planes.</div>';
+      return;
+    }
+
     let leafNote = 'Each leaf uplinks to all spines in its plane.';
     if (!Number.isInteger(bundleSize)) {
       leafNote = '<span style="color:var(--coral600);font-weight:600">Warning:</span> Uplinks do not divide evenly across spines. This topology is unbalanced.';
     }
 
     switchHtml  = mkSection(iconServer(), 'Spine layer', [
-      ['Spine radix', spineRadix],
+      ['Spine platform', spinePlatform.desc],
       ['Spine per plane', spinePerPlane], ['Planes', planes],
       ['Total spine switches', totalSpine], ['Downlink ports used', Math.floor(leafPerPlane * bundleSize)],
     ]);
     switchHtml += mkSection(iconBranch(), 'Leaf layer', [
-      ['Leaf radix', leafRadix],
+      ['Leaf platform', leafPlatform.desc],
       ['Leaf per plane', leafPerPlane], ['Total leaf switches', totalLeaf],
-      ['Host links per leaf', Math.ceil(linksPerPlane / leafPerPlane) + (breakout > 1 ? ` (via ${breakout}:1 breakout)` : '')], 
+      ['Host links per leaf', Math.ceil(linksPerPlane / leafPerPlane) + (breakout > 1 ? ` (via ${breakout}:1 breakout)` : '')],
       ['Phys downlinks used', physDownlinks],
       ['Total uplinks used', uplinks],
       ['Links per spine (bundle)', bundleStr],
@@ -634,16 +777,16 @@ function calculate() {
 
     optHtml = opticsSection(optRows, 'Spine links: ' + opticType(spineSpeed) + ' · Host links: ' + opticType(hostSpeed) + '.');
 
-    const leafBox = renderBox('1× Leaf Switch', `${leafRadix}-port radix`);
-    const spineBox = renderBox('1× Spine Switch', `${spineRadix}-port radix`);
+    const leafBox = renderBox('1× Leaf Switch', `${leafPlatform.name}<br>${leafRadix}-port`);
+    const spineBox = renderBox('1× Spine Switch', `${spinePlatform.name}<br>${spineRadix}-port`);
     const uplinksStr = `${Number.isInteger(bundleSize) ? bundleSize : bundleSize.toFixed(1)}× ${spineSpeed}G uplinks`;
     diagramHtml = diagHeader + nodeBox + renderLink(hostLinkStr) + leafBox + renderLink(uplinksStr) + spineBox + '</div>';
 
   } else {
-    const leafRadix   = parseInt(document.getElementById('leaf-radix').value) || 64;
-    const spineRadix  = parseInt(document.getElementById('spine-radix').value) || 64;
+    const leafRadix   = getRadix('leaf');
+    const spineRadix  = getRadix('spine');
     
-    const physDownlinks = Math.floor(leafRadix / (1 + oversub));
+    const physDownlinks = Math.floor(leafRadix * oversub / (1 + oversub));
     const effDownlinks  = physDownlinks * breakout;
     const uplinks       = leafRadix - physDownlinks;
 
@@ -676,17 +819,25 @@ function calculate() {
     const hOptHostBase  = totalHostLinks;
     const hBase         = hOptSwitchBase + hOptHostBase;
 
+    if (e2aBundle < 1 || a2sBundle < 1) {
+      const badBundle = e2aBundle < 1 ? 'edge-to-agg (' + e2aBundle.toFixed(2) + ')' : 'agg-to-spine (' + a2sBundle.toFixed(2) + ')';
+      el.innerHTML = '<div class="error-msg">Invalid topology: ' + badBundle + ' bundle size is below 1.' +
+        ' The selected platforms cannot support this cluster size.' +
+        ' Try larger platforms or increase the number of planes.</div>';
+      return;
+    }
+
     switchHtml  = mkSection(iconServer(), 'Spine layer', [
-      ['Spine radix', spineRadix],
+      ['Spine platform', spinePlatform.desc],
       ['Spine per plane', spinePerPlane], ['Total spine switches', totalSpine],
     ]);
     switchHtml += mkSection(iconBranch(), 'Aggregation leaf (tier 2)', [
-      ['Leaf radix', leafRadix],
+      ['Leaf platform', leafPlatform.desc],
       ['Agg leaf per plane', leaf1PerPlane], ['Total agg leaves', totalLeaf1],
       ['Links per spine (bundle)', a2sBundleStr],
     ]);
     switchHtml += mkSection(iconBranch(), 'Edge leaf (tier 1)', [
-      ['Leaf radix', leafRadix],
+      ['Leaf platform', leafPlatform.desc],
       ['Edge leaf per plane', leaf2PerPlane], ['Total edge leaves', totalLeaf2],
       ['Host links per edge', Math.ceil(linksPerPlane / leaf2PerPlane) + (breakout > 1 ? ` (via ${breakout}:1)` : '')],
       ['Links per agg leaf (bundle)', e2aBundleStr],
@@ -713,9 +864,9 @@ function calculate() {
 
     optHtml = opticsSection(optRows, 'Spine/agg links: ' + opticType(spineSpeed) + ' · Host links: ' + opticType(hostSpeed) + '.');
 
-    const leaf2Box = renderBox('1× Edge Leaf Switch', `${leafRadix}-port radix`);
-    const leaf1Box = renderBox('1× Agg Leaf Switch', `${leafRadix}-port radix`);
-    const spineBox = renderBox('1× Spine Switch', `${spineRadix}-port radix`);
+    const leaf2Box = renderBox('1× Edge Leaf Switch', `${leafPlatform.name}<br>${leafRadix}-port`);
+    const leaf1Box = renderBox('1× Agg Leaf Switch', `${leafPlatform.name}<br>${leafRadix}-port`);
+    const spineBox = renderBox('1× Spine Switch', `${spinePlatform.name}<br>${spineRadix}-port`);
     const e2aStr = `${Number.isInteger(e2aBundle) ? e2aBundle : e2aBundle.toFixed(1)}× ${spineSpeed}G links`;
     const a2sStr = `${Number.isInteger(a2sBundle) ? a2sBundle : a2sBundle.toFixed(1)}× ${spineSpeed}G links`;
 
