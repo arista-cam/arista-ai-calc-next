@@ -404,13 +404,13 @@
     <div class="input-row" id="leaf-radix-row">
       <label>Leaf switch</label>
       <select id="leaf-radix" onchange="toggleCustomRadix('leaf')"></select>
-      <input type="number" id="leaf-radix-custom" min="2" max="1024" step="2" placeholder="ports" style="display:none; width:80px">
+      <input type="number" id="leaf-radix-custom" min="2" max="1024" step="2" placeholder="ports" style="display:none; width:80px" oninput="clearResults()">
       <span class="hint" id="leaf-radix-hint">Arista 800G platform</span>
     </div>
     <div class="input-row" id="spine-radix-row">
       <label>Spine switch</label>
       <select id="spine-radix" onchange="toggleCustomRadix('spine')"></select>
-      <input type="number" id="spine-radix-custom" min="2" max="1024" step="2" placeholder="ports" style="display:none; width:80px">
+      <input type="number" id="spine-radix-custom" min="2" max="1024" step="2" placeholder="ports" style="display:none; width:80px" oninput="clearResults()">
       <span class="hint" id="spine-radix-hint">Arista 800G platform</span>
     </div>
 
@@ -427,7 +427,7 @@
     </div>
     <div class="input-row">
       <label>Downlink:Uplink ratio</label>
-      <input type="number" id="oversub" min="0.25" max="4" step="0.25" value="1">
+      <input type="number" id="oversub" min="0.25" max="4" step="0.25" value="1" oninput="clearResults()">
       <span class="hint">1 = non-blocking, &lt;1 = more uplinks</span>
     </div>
     <div class="input-row">
@@ -445,7 +445,7 @@
     <p class="section-label">Optics</p>
     <div class="input-row" id="spine-speed-row">
       <label>Spine link speed</label>
-      <select id="spine-speed">
+      <select id="spine-speed" onchange="clearResults()">
         <option value="400">400G</option>
         <option value="800" selected>800G</option>
       </select>
@@ -453,7 +453,7 @@
     </div>
     <div class="input-row">
       <label>Host NIC link speed</label>
-      <select id="host-speed">
+      <select id="host-speed" onchange="clearResults()">
         <option value="100">100G</option>
         <option value="200">200G</option>
         <option value="400" selected>400G</option>
@@ -624,7 +624,10 @@ function populateDropdowns() {
   spineSelect.value = '64';
 }
 
+function clearResults() { document.getElementById('results').innerHTML = ''; }
+
 function toggleCustomRadix(role) {
+  clearResults();
   const select = document.getElementById(role + '-radix');
   const custom = document.getElementById(role + '-radix-custom');
   const hint = document.getElementById(role + '-radix-hint');
@@ -682,6 +685,7 @@ function getRadix(role) {
 }
 
 function autoSelectPlatforms() {
+  clearResults();
   const tierNum = parseInt(document.querySelector('input[name=tier]:checked').value);
 
   const totalGPUs   = parseInt(document.getElementById('total-gpus').value) || 0;
@@ -779,6 +783,7 @@ function autoSelect3Tier(linksPerPlane, breakout) {
 }
 
 function updateTierHint() {
+  clearResults();
   const t = document.querySelector('input[name=tier]:checked').value;
   document.getElementById('tier-hint').textContent = TIER_HINTS[t];
   
