@@ -520,7 +520,7 @@
         <input type="checkbox" id="aroc-vxlan-check" onchange="refreshArocItems()">
         <span>VXLAN (multi-tenancy)</span>
       </label>
-      <div class="aroc-license-note" id="aroc-license-note">Licenses auto-included: E (all switches)</div>
+      <div class="aroc-license-note" id="aroc-license-note">License default: E (all switches) — connect to load available options</div>
     </div>
     <table class="aroc-items-table">
       <thead><tr><th>Item</th><th>SKU / Optic</th><th style="text-align:center">Qty</th><th>Status</th></tr></thead>
@@ -554,15 +554,15 @@ const PLATFORMS = [
 const AROC_ENDPOINT = 'https://aroc.aristanetworks.com/api/graphql';
 
 const AROC_SKUS = {
-  '7060X6-32':  { sku: 'DCS-7060X6-32PE-F',       id: 'c2t1czoxMjk3NA==' },
-  '7060X6-64':  { sku: 'DCS-7060X6-64PE-F',       id: 'c2t1czoxMjUzMQ==' },
-  '7700R4-38':  { sku: 'DCS-DL-7700R4C-38PE-B-F', id: 'c2t1czoxMzQyOA==' },
-  '7700R4-128': { sku: 'DCS-DS-7720R4-128PE',     id: 'c2t1czoxMzUzNw==' },
-  '7800R4-4':   { sku: 'DCS-7804R4-BNDS-U',       id: 'c2t1czoxMzMzOQ==' },
-  '7800R4-8':   { sku: 'DCS-7808R4-BNDS-U',       id: 'c2t1czoxMjgwNw==' },
-  '7800R4-12':  { sku: 'DCS-7812R4-BNDS-U',       id: 'c2t1czoxMjgwNQ==' },
-  '7800R4-16':  { sku: 'DCS-7816LR4-BND-S2',      id: null },
-  'linecard':   { sku: 'DCS-7800R4-36PE-LC',      id: 'c2t1czoxMzM4NQ==' },
+  '7060X6-32':  'DCS-7060X6-32PE-F',
+  '7060X6-64':  'DCS-7060X6-64PE-F',
+  '7700R4-38':  'DCS-DL-7700R4C-38PE-B-F',
+  '7700R4-128': 'DCS-DS-7720R4-128PE',
+  '7800R4-4':   'DCS-7804R4-BNDS-U',
+  '7800R4-8':   'DCS-7808R4-BNDS-U',
+  '7800R4-12':  'DCS-7812R4-BNDS-U',
+  '7800R4-16':  'DCS-7816LR4-BND-S2',
+  'linecard':   'DCS-7800R4-36PE-LC',
 };
 
 const AROC_OPTICS = {
@@ -600,31 +600,10 @@ const AROC_OPTICS = {
   ],
 };
 
-const AROC_LICENSES = {
-  '7060X6-32':  { e: { sku: 'LIC-FIX-3-E',       id: null }, flx: { sku: 'LIC-FIX-3-FLX-L',       id: null } },
-  '7060X6-64':  { e: { sku: 'LIC-FIX-4-E',       id: null }, flx: { sku: 'LIC-FIX-4-FLX-L',       id: null } },
-  '7700R4-38':  { e: { sku: 'LIC-DL-E',           id: null }, flx: { sku: 'LIC-DL-FLX',            id: null } },
-  '7700R4-128': null,
-  '7800R4-4':   { e: { sku: 'LIC-MOD-7804R4-E',  id: null }, flx: { sku: 'LIC-MOD-7804R4-FLX-L',  id: null } },
-  '7800R4-8':   { e: { sku: 'LIC-MOD-7808R4-E',  id: null }, flx: { sku: 'LIC-MOD-7808R4-FLX-L',  id: null } },
-  '7800R4-12':  { e: { sku: 'LIC-MOD-7812R4-E',  id: null }, flx: { sku: 'LIC-MOD-7812R4-FLX-L',  id: null } },
-  '7800R4-16':  { e: { sku: 'LIC-MOD-7816R4-E',  id: null }, flx: { sku: 'LIC-MOD-7816R4-FLX-L',  id: null } },
-};
-
-const AROC_CVP = {
-  '7060X6-32':  { onprem: { sku: 'SS-CV-FIX-3-SWITCH-1M',  id: null }, cvaas: { sku: 'SS-CVS-FIX-3-SWITCH-1M',  id: null } },
-  '7060X6-64':  { onprem: { sku: 'SS-CV-FIX-4-SWITCH-1M',  id: null }, cvaas: { sku: 'SS-CVS-FIX-4-SWITCH-1M',  id: null } },
-  '7700R4-38':  { onprem: { sku: 'SS-CV-SWITCH-1M',         id: null }, cvaas: { sku: 'SS-CVS-SWITCH-1M',         id: null } },
-  '7700R4-128': null,
-  '7800R4-4':   { onprem: { sku: 'SS-CV-MOD-X-SWITCH-1M',   id: null }, cvaas: { sku: 'SS-CVS-MOD-X-SWITCH-1M',   id: null } },
-  '7800R4-8':   { onprem: { sku: 'SS-CV-MOD-X-SWITCH-1M',   id: null }, cvaas: { sku: 'SS-CVS-MOD-X-SWITCH-1M',   id: null } },
-  '7800R4-12':  { onprem: { sku: 'SS-CV-MOD-X-SWITCH-1M',   id: null }, cvaas: { sku: 'SS-CVS-MOD-X-SWITCH-1M',   id: null } },
-  '7800R4-16':  { onprem: { sku: 'SS-CV-MOD-X-SWITCH-1M',   id: null }, cvaas: { sku: 'SS-CVS-MOD-X-SWITCH-1M',   id: null } },
-};
-
 let lastCalcResult = null;
 let arocToken = null;
 let arocRegions = [];
+let platformData = {};
 
 function getArocSkuKey(platform) {
   if (!platform) return null;
@@ -1295,34 +1274,6 @@ function buildCalcResult(tierNum, ctx) {
     if (hostOpticCat)  items.push({ desc: 'Host-tier optics · ' + hostSpeed + 'G',   qty: hBase,   type: 'optic', opticCat: hostOpticCat });
   }
 
-  const vxlan = document.getElementById('aroc-vxlan-check')?.checked || false;
-  const switchIndices = items.reduce((acc, it, i) => { if (it.type === 'switch' && it.role) acc.push(i); return acc; }, []);
-  for (const si of switchIndices) {
-    const sw = items[si];
-    const licPlatform = AROC_LICENSES[sw.skuKey];
-    if (licPlatform) {
-      const needFlx = vxlan && sw.role === 'leaf';
-      const licLabel = needFlx ? 'FLX-L License' : 'E License';
-      items.push({ desc: licLabel + ': ' + sw.desc, qty: sw.qty, type: 'license', skuKey: sw.skuKey, licType: needFlx ? 'flx' : 'e', parentIdx: si });
-    }
-  }
-
-  const includeCvp = document.getElementById('aroc-cvp-check')?.checked || false;
-  const cvpType = document.getElementById('aroc-cvp-type')?.value || 'onprem';
-  const cvpMonths = parseInt(document.getElementById('aroc-cvp-months')?.value) || 36;
-  if (includeCvp) {
-    for (const si of switchIndices) {
-      const sw = items[si];
-      const cvpPlatform = AROC_CVP[sw.skuKey];
-      if (cvpPlatform) {
-        const cvpLabel = cvpType === 'cvaas' ? 'CVaaS' : 'CVP';
-        items.push({ desc: cvpLabel + ' (' + cvpMonths + 'mo): ' + sw.desc, qty: sw.qty, type: 'cvp', skuKey: sw.skuKey, cvpType, months: cvpMonths, parentIdx: si });
-      } else if (cvpPlatform === null) {
-        items.push({ desc: 'CVP: ' + sw.desc + ' (not supported)', qty: 0, type: 'cvp-unsupported', parentIdx: si });
-      }
-    }
-  }
-
   lastCalcResult = { tierNum, items, ctx };
 }
 
@@ -1338,31 +1289,70 @@ function openArocModal() {
   updateGoButton();
 }
 
+function getDefaultLicense(skuKey, role) {
+  const pd = platformData[skuKey];
+  if (!pd || !pd.licenses.length) return null;
+  const vxlan = document.getElementById('aroc-vxlan-check')?.checked || false;
+  const wantFlx = vxlan && role === 'leaf';
+  const eLic = pd.licenses.find(l => /Basic/i.test(l.name)) || pd.licenses[0];
+  if (wantFlx) {
+    const flx = pd.licenses.find(l => /VXLAN|EVPN|FLX|FLEX/i.test(l.name));
+    if (flx) return flx;
+  }
+  return eLic;
+}
+
+function getDefaultSubscription(skuKey) {
+  const pd = platformData[skuKey];
+  if (!pd || !pd.subscriptions.length) return null;
+  const cvpType = document.getElementById('aroc-cvp-type')?.value || 'onprem';
+  const isCvaas = cvpType === 'cvaas';
+  if (isCvaas) {
+    const cvaas = pd.subscriptions.find(s => /CVS/i.test(s.name));
+    if (cvaas) return cvaas;
+  }
+  const onprem = pd.subscriptions.find(s => /CV[^S]/i.test(s.name) || (/CV/i.test(s.name) && !/CVS/i.test(s.name)));
+  return onprem || pd.subscriptions[0];
+}
+
 function populateArocItems() {
   const body = document.getElementById('aroc-items-body');
   body.innerHTML = '';
+  const includeCvp = document.getElementById('aroc-cvp-check')?.checked || false;
+  const cvpMonths = parseInt(document.getElementById('aroc-cvp-months')?.value) || 36;
+
   lastCalcResult.items.forEach((item, i) => {
     const tr = document.createElement('tr');
     let skuCell = '';
     if (item.type === 'switch') {
-      const entry = AROC_SKUS[item.skuKey];
-      skuCell = entry ? '<span style="font-size:12px;font-family:monospace">' + entry.sku + '</span>' : '<span style="color:var(--text3)">Unknown</span>';
+      const skuName = AROC_SKUS[item.skuKey];
+      skuCell = skuName ? '<span style="font-size:12px;font-family:monospace">' + skuName + '</span>' : '<span style="color:var(--text3)">Unknown</span>';
     } else if (item.type === 'optic') {
       const opts = AROC_OPTICS[item.opticCat] || [];
       skuCell = '<select id="aroc-optic-' + i + '">' + opts.map((o, j) => '<option value="' + j + '">' + o.label + '</option>').join('') + '</select>';
-    } else if (item.type === 'license') {
-      const platform = AROC_LICENSES[item.skuKey];
-      const entry = platform ? platform[item.licType] : null;
-      skuCell = entry ? '<span style="font-size:12px;font-family:monospace">' + entry.sku + '</span>' : '<span style="color:var(--text3)">No license</span>';
-    } else if (item.type === 'cvp') {
-      const platform = AROC_CVP[item.skuKey];
-      const entry = platform ? platform[item.cvpType] : null;
-      skuCell = entry ? '<span style="font-size:12px;font-family:monospace">' + entry.sku + '</span>' : '<span style="color:var(--text3)">Unknown</span>';
-    } else if (item.type === 'cvp-unsupported') {
-      skuCell = '<span style="color:var(--coral600);font-size:12px">Not supported</span>';
     }
     tr.innerHTML = '<td>' + item.desc + '</td><td>' + skuCell + '</td><td class="qty">' + fmtN(item.qty) + '</td><td id="aroc-status-' + i + '" class="aroc-status-pending">—</td>';
     body.appendChild(tr);
+
+    if (item.type === 'switch' && item.role) {
+      const pd = platformData[item.skuKey];
+      if (pd && pd.licenses.length) {
+        const defLic = getDefaultLicense(item.skuKey, item.role);
+        const licTr = document.createElement('tr');
+        licTr.style.background = 'var(--bg2)';
+        const licOpts = pd.licenses.map(l => '<option value="' + l.id + '"' + (defLic && l.id === defLic.id ? ' selected' : '') + '>' + l.name + '</option>').join('');
+        licTr.innerHTML = '<td style="padding-left:24px;font-size:12px;color:var(--text2)">↳ License</td><td><select id="aroc-lic-' + i + '" style="font-size:11px">' + licOpts + '</select></td><td class="qty">' + fmtN(item.qty) + '</td><td id="aroc-lic-status-' + i + '" class="aroc-status-pending">—</td>';
+        body.appendChild(licTr);
+      }
+      if (includeCvp && pd && pd.subscriptions.length) {
+        const defSub = getDefaultSubscription(item.skuKey);
+        const subTr = document.createElement('tr');
+        subTr.style.background = 'var(--bg2)';
+        const subOpts = pd.subscriptions.map(s => '<option value="' + s.id + '"' + (defSub && s.id === defSub.id ? ' selected' : '') + '>' + s.name + '</option>').join('');
+        subTr.innerHTML = '<td style="padding-left:24px;font-size:12px;color:var(--text2)">↳ Subscription (' + cvpMonths + 'mo)</td><td><select id="aroc-sub-' + i + '" style="font-size:11px">' + subOpts + '</select></td><td class="qty">' + fmtN(item.qty) + '</td><td id="aroc-sub-status-' + i + '" class="aroc-status-pending">—</td>';
+        body.appendChild(subTr);
+      }
+    }
   });
 }
 
@@ -1370,12 +1360,9 @@ function refreshArocItems() {
   document.getElementById('aroc-cvp-extra').style.display = document.getElementById('aroc-cvp-check').checked ? 'flex' : 'none';
   const vxlan = document.getElementById('aroc-vxlan-check').checked;
   document.getElementById('aroc-license-note').textContent = vxlan
-    ? 'Licenses auto-included: E (spine) · FLX-L (leaf)'
-    : 'Licenses auto-included: E (all switches)';
-  if (lastCalcResult) {
-    buildCalcResult(lastCalcResult.tierNum, lastCalcResult.ctx);
-    populateArocItems();
-  }
+    ? 'License default: E (spine) · FLX-L (leaf)'
+    : 'License default: E (all switches)';
+  if (lastCalcResult) populateArocItems();
 }
 
 function closeArocModal() {
@@ -1404,6 +1391,31 @@ async function arocFetch(query, token, variables) {
   return resp.json();
 }
 
+async function fetchPlatformAccessories(token, regionId) {
+  const skuFragment = 'id name accessories { id name description type { name } } accessoryLicenses { id name } accessorySoftwareSubscriptions { id name group { name } }';
+  const entries = Object.entries(AROC_SKUS);
+  const batchSize = 5;
+  for (let b = 0; b < entries.length; b += batchSize) {
+    const batch = entries.slice(b, b + batchSize);
+    const aliases = batch.map(([key, skuName], i) =>
+      'p' + (b + i) + ': sku(name: "' + skuName + '") { ' + skuFragment + ' }'
+    ).join('\n');
+    const data = await arocFetch('{ ' + aliases + ' }', token);
+    if (data.errors) continue;
+    batch.forEach(([key], i) => {
+      const sku = data.data['p' + (b + i)];
+      if (!sku) return;
+      platformData[key] = {
+        skuId: sku.id,
+        skuName: sku.name,
+        licenses: sku.accessoryLicenses || [],
+        subscriptions: sku.accessorySoftwareSubscriptions || [],
+        allAccessories: sku.accessories || [],
+      };
+    });
+  }
+}
+
 async function connectAroc() {
   const token = document.getElementById('aroc-token').value.trim();
   if (!token) return;
@@ -1416,10 +1428,15 @@ async function connectAroc() {
     arocToken = token;
     updateRegionDropdown();
     updateGoButton();
-    status.innerHTML = '<span class="aroc-status-ok">Connected (' + arocRegions.length + ' regions)</span>';
+    status.innerHTML = '<span style="color:var(--text3)">Loading platforms…</span>';
+    await fetchPlatformAccessories(token, arocRegions[0]?.id);
+    const loaded = Object.keys(platformData).length;
+    status.innerHTML = '<span class="aroc-status-ok">Connected (' + arocRegions.length + ' regions, ' + loaded + ' platforms loaded)</span>';
+    if (lastCalcResult) populateArocItems();
   } catch (e) {
     arocRegions = [];
     arocToken = null;
+    platformData = {};
     updateGoButton();
     if (e instanceof TypeError && e.message === 'Failed to fetch') {
       status.innerHTML = '<span class="aroc-status-err">CORS blocked — try running this page from the same domain as AROC.</span>';
@@ -1429,28 +1446,10 @@ async function connectAroc() {
   }
 }
 
-async function resolveSkuId(item, idx) {
-  if (item.type === 'cvp-unsupported') return null;
-  let entry = null;
-  if (item.type === 'switch') {
-    entry = AROC_SKUS[item.skuKey];
-  } else if (item.type === 'license') {
-    const platform = AROC_LICENSES[item.skuKey];
-    entry = platform ? platform[item.licType] : null;
-  } else if (item.type === 'cvp') {
-    const platform = AROC_CVP[item.skuKey];
-    entry = platform ? platform[item.cvpType] : null;
-  } else if (item.type === 'optic') {
-    const opts = AROC_OPTICS[item.opticCat] || [];
-    const sel = document.getElementById('aroc-optic-' + idx);
-    entry = opts[parseInt(sel?.value || '0')];
-  }
-  if (!entry) return null;
-  if (entry.id) return entry.id;
-  const data = await arocFetch('{ skus(first: 1, searchFor: { term: "' + entry.sku + '", field: NAME }) { edges { node { id name } } } }', arocToken);
+async function resolveOpticSkuId(skuName) {
+  const data = await arocFetch('{ skus(first: 1, searchFor: { term: "' + skuName + '", field: NAME }) { edges { node { id name } } } }', arocToken);
   const edges = data?.data?.skus?.edges;
-  if (edges && edges.length) { entry.id = edges[0].node.id; return entry.id; }
-  return null;
+  return edges?.length ? edges[0].node.id : null;
 }
 
 async function exportToAroc() {
@@ -1458,30 +1457,43 @@ async function exportToAroc() {
   const regionId = document.getElementById('aroc-region').value;
   const btn = document.getElementById('aroc-go-btn');
   const summary = document.getElementById('aroc-summary');
+  const includeCvp = document.getElementById('aroc-cvp-check')?.checked || false;
+  const cvpMonths = parseInt(document.getElementById('aroc-cvp-months')?.value) || 36;
   btn.disabled = true;
   summary.innerHTML = '';
   let ok = 0, fail = 0;
   const items = lastCalcResult.items;
-  const cartItemIds = {};
+
+  const addToCartMutation = 'mutation AddToCartMutation($input: AddToCartInput!) { addToCart(input: $input) { cartItems { id } validationErrors { message } } }';
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     const statusEl = document.getElementById('aroc-status-' + i);
 
-    if (item.type === 'cvp-unsupported') {
-      statusEl.innerHTML = '<span class="aroc-status-err">Skipped</span>';
-      continue;
-    }
+    if (item.type === 'switch') {
+      const pd = platformData[item.skuKey];
+      if (!pd) { statusEl.innerHTML = '<span class="aroc-status-err">Platform not loaded</span>'; fail++; continue; }
 
-    if (item.type === 'switch' || item.type === 'optic') {
-      statusEl.innerHTML = '<span style="color:var(--text3)">Resolving SKU…</span>';
+      statusEl.innerHTML = '<span style="color:var(--text3)">Adding to cart…</span>';
       try {
-        const skuId = await resolveSkuId(item, i);
-        if (!skuId) { statusEl.innerHTML = '<span class="aroc-status-err">SKU not found</span>'; fail++; continue; }
+        const accessories = [];
+        const licSel = document.getElementById('aroc-lic-' + i);
+        if (licSel?.value) {
+          accessories.push({ skuId: licSel.value, quantity: item.qty, discount: null, months: null, remarks: '', shippingType: null });
+        }
+        const subSel = document.getElementById('aroc-sub-' + i);
+        if (includeCvp && subSel?.value) {
+          accessories.push({ skuId: subSel.value, quantity: item.qty, discount: null, months: cvpMonths, remarks: '', shippingType: null });
+        }
 
-        statusEl.innerHTML = '<span style="color:var(--text3)">Adding to cart…</span>';
-        const mutation = 'mutation { addToCart(input: { sku: { skuId: "' + skuId + '", quantity: ' + item.qty + ' }, regionId: "' + regionId + '" }) { cartItems { id } validationErrors { message } } }';
-        const result = await arocFetch(mutation, arocToken);
+        const variables = {
+          input: {
+            regionId: regionId,
+            sku: { skuId: pd.skuId, quantity: item.qty, discount: null, months: null, applianceQuantity: null, remarks: '', tagIds: [] },
+            accessories: accessories,
+          }
+        };
+        const result = await arocFetch(addToCartMutation, arocToken, variables);
 
         if (result.errors) throw new Error(result.errors[0].message);
         const payload = result.data?.addToCart;
@@ -1491,42 +1503,46 @@ async function exportToAroc() {
         } else {
           statusEl.innerHTML = '<span class="aroc-status-ok">✓ Added</span>';
           ok++;
-          if (item.type === 'switch' && payload.cartItems?.length) {
-            cartItemIds[i] = payload.cartItems[0].id;
-          }
+          const licStatus = document.getElementById('aroc-lic-status-' + i);
+          if (licStatus && licSel?.value) licStatus.innerHTML = '<span class="aroc-status-ok">✓</span>';
+          const subStatus = document.getElementById('aroc-sub-status-' + i);
+          if (subStatus && includeCvp && subSel?.value) subStatus.innerHTML = '<span class="aroc-status-ok">✓</span>';
         }
       } catch (e) {
         statusEl.innerHTML = '<span class="aroc-status-err">' + e.message + '</span>';
         fail++;
       }
 
-    } else if (item.type === 'license' || item.type === 'cvp') {
-      const parentCartItemId = cartItemIds[item.parentIdx];
-      if (!parentCartItemId) {
-        statusEl.innerHTML = '<span class="aroc-status-err">Parent switch not in cart</span>';
-        fail++;
-        continue;
-      }
-
+    } else if (item.type === 'optic') {
       statusEl.innerHTML = '<span style="color:var(--text3)">Resolving SKU…</span>';
       try {
-        const skuId = await resolveSkuId(item, i);
+        const opts = AROC_OPTICS[item.opticCat] || [];
+        const sel = document.getElementById('aroc-optic-' + i);
+        const optic = opts[parseInt(sel?.value || '0')];
+        if (!optic) { statusEl.innerHTML = '<span class="aroc-status-err">No optic selected</span>'; fail++; continue; }
+
+        const skuId = await resolveOpticSkuId(optic.sku);
         if (!skuId) { statusEl.innerHTML = '<span class="aroc-status-err">SKU not found</span>'; fail++; continue; }
 
-        statusEl.innerHTML = '<span style="color:var(--text3)">Adding accessory…</span>';
-        const months = item.type === 'cvp' ? item.months : null;
-        const accMutation = 'mutation AddAccessoriesToParentCartItemMutation($input: AddAccessoriesToParentCartItemInput!) { addAccessoriesToParentCartItem(input: $input) { parentCartItem { id accessories { id sku { id name } quantity months } } } }';
-        const accVars = {
+        statusEl.innerHTML = '<span style="color:var(--text3)">Adding to cart…</span>';
+        const variables = {
           input: {
-            id: parentCartItemId,
-            accessories: [{ skuId: skuId, quantity: item.qty, months: months, discount: null, remarks: '', shippingType: null }]
+            regionId: regionId,
+            sku: { skuId: skuId, quantity: item.qty, discount: null, months: null, applianceQuantity: null, remarks: '', tagIds: [] },
+            accessories: [],
           }
         };
-        const result = await arocFetch(accMutation, arocToken, accVars);
+        const result = await arocFetch(addToCartMutation, arocToken, variables);
 
         if (result.errors) throw new Error(result.errors[0].message);
-        statusEl.innerHTML = '<span class="aroc-status-ok">✓ Added</span>';
-        ok++;
+        const payload = result.data?.addToCart;
+        if (payload?.validationErrors?.length) {
+          statusEl.innerHTML = '<span class="aroc-status-err">' + payload.validationErrors[0].message + '</span>';
+          fail++;
+        } else {
+          statusEl.innerHTML = '<span class="aroc-status-ok">✓ Added</span>';
+          ok++;
+        }
       } catch (e) {
         statusEl.innerHTML = '<span class="aroc-status-err">' + e.message + '</span>';
         fail++;
