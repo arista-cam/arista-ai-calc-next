@@ -236,23 +236,8 @@
     display: flex; align-items: center; gap: 8px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em;
   }
   .diag-title svg { width: 20px; height: 20px; stroke: var(--primary); fill: none; stroke-width: 2; }
-  .diag-box { 
-    background: var(--bg); border: 2px solid var(--border2); 
-    border-radius: var(--radius); padding: 16px 24px; text-align: center; 
-    min-width: 260px; box-shadow: var(--shadow-sm); z-index: 2; transition: border-color 0.2s; 
-  }
-  .diag-box:hover { border-color: var(--primary); }
-  .diag-box-title { font-weight: 600; font-size: 15px; color: var(--text); }
-  .diag-box-sub { font-size: 13px; color: var(--text3); margin-top: 4px; }
-  .diag-link {
-    display: flex; align-items: center; justify-content: center;
-    height: 60px; position: relative; width: 2px; background: var(--border2); z-index: 1;
-  }
-  .diag-link-label {
-    position: absolute; background: var(--bg2); padding: 4px 14px;
-    font-size: 13px; font-weight: 600; color: var(--primary);
-    border: 1px solid var(--border2); border-radius: 20px; white-space: nowrap; z-index: 2; box-shadow: var(--shadow-sm);
-  }
+  .diagram-wrapper > svg { width: 100%; max-width: 520px; height: auto; margin: 0 auto; display: block; }
+  .diagram-wrapper svg text { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
   .aroc-btn {
     display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -711,7 +696,7 @@ function autoSelectPlatforms() {
   if (gpus <= 0) return;
 
   const totalHostLinks = gpus * linksPerGpu;
-  const linksPerPlane  = Math.ceil(totalHostLinks / planes);
+  const linksPerPlane  = totalHostLinks;
 
   if (tierNum === 1) {
     autoSelect1Tier(linksPerPlane, breakout);
@@ -908,8 +893,8 @@ function calculate() {
   const gpus   = totalGPUs || hosts * gpusPerNode;
   
   const totalHostLinks = gpus * linksPerGpu;
-  const linksPerPlane  = Math.ceil(totalHostLinks / planes);
-  
+  const linksPerPlane  = totalHostLinks;
+
   // Leaf switch topology math
   const physDownlinks = Math.floor(leafRadix * oversub / (1 + oversub));
   const effDownlinks  = physDownlinks * breakout;
@@ -951,13 +936,84 @@ function calculate() {
   let totalSpine = 0, totalLeaf = 0;
 
   // -- Diagram Helpers --
-  const diagHeader = '<div class="diagram-wrapper"><div class="diag-title"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Logical Data Path (Single Node Slice)</div>';
-  const renderBox = (title, sub) => `<div class="diag-box"><div class="diag-box-title">${title}</div><div class="diag-box-sub" style="line-height:1.4">${sub}</div></div>`;
-  const renderLink = (label) => `<div class="diag-link"><div class="diag-link-label">${label}</div></div>`;
-
   const linksPerNode = gpusPerNode * linksPerGpu;
-  const nodeBox = renderBox('1× Compute Node', `${gpusPerNode} GPUs · ${linksPerNode} Backend Links`);
   const hostLinkStr = `${linksPerNode}× ${hostSpeed}G links` + (breakout > 1 ? ` (into ${linksPerNode/breakout}× switch ports)` : '');
+  const diagTitle = 'Logical Data Path (Single Node Slice' + (planes > 1 ? ` · ${planes} Planes` : '') + ')';
+
+  function buildDiagram(nodes, planes) {
+    const W = 240, H = 68, R = 10, GAP = 80, GS = 12;
+    const ghostSteps = planes > 2 ? 2 : (planes > 1 ? 1 : 0);
+    const maxLabelLen = Math.max(...nodes.filter(n => n.link).map(n => n.link.length), 0);
+    const labelW = maxLabelLen * 7 + 28 + (planes > 1 ? (`×${planes} planes`).length * 6.5 + 26 : 0);
+    const contentW = Math.max(W + ghostSteps * GS, labelW);
+    const pad = 20;
+    const svgW = contentW + pad * 2;
+    const ox = pad + Math.max(0, (contentW - W - ghostSteps * GS) / 2);
+
+    let positions = [], totalH = 0;
+    nodes.forEach((n, i) => {
+      if (n.link) { positions.push({ type: 'link', y: totalH, h: GAP, label: n.link }); totalH += GAP; }
+      else {
+        const subLines = (n.sub || '').split('\n');
+        const boxH = H + (subLines.length > 2 ? (subLines.length - 2) * 16 : 0);
+        positions.push({ type: 'box', y: totalH, h: boxH, title: n.title, subLines, stacked: n.stacked });
+        totalH += boxH;
+      }
+    });
+    totalH += ghostSteps * GS;
+    const svgH = totalH + pad;
+
+    let ghostLayer = '', mainLines = '', mainBoxes = '', labels = '';
+
+    for (let i = 0; i < positions.length; i++) {
+      const p = positions[i];
+      if (p.type === 'box') {
+        const cx = ox + W / 2, bx = ox;
+        for (let g = ghostSteps; g >= 1; g--) {
+          if (!p.stacked) continue;
+          const gx = bx + g * GS, gy = p.y + g * GS;
+          const op = g === 2 ? 0.25 : 0.5;
+          ghostLayer += `<rect x="${gx}" y="${gy}" width="${W}" height="${p.h}" rx="${R}" fill="var(--bg)" stroke="var(--border2)" stroke-width="2" stroke-dasharray="6 4" opacity="${op}"/>`;
+        }
+        mainBoxes += `<rect x="${bx}" y="${p.y}" width="${W}" height="${p.h}" rx="${R}" fill="var(--bg)" stroke="var(--border2)" stroke-width="2"/>`;
+        mainBoxes += `<text x="${cx}" y="${p.y + 28}" text-anchor="middle" fill="var(--text)" font-size="15" font-weight="600">${esc(p.title)}</text>`;
+        p.subLines.forEach((line, li) => {
+          mainBoxes += `<text x="${cx}" y="${p.y + 46 + li * 16}" text-anchor="middle" fill="var(--text3)" font-size="13">${esc(line)}</text>`;
+        });
+      } else if (p.type === 'link') {
+        const prevBox = positions[i - 1], nextBox = positions[i + 1];
+        const x = ox + W / 2;
+        const y1 = prevBox ? prevBox.y + prevBox.h : p.y;
+        const y2 = nextBox ? nextBox.y : p.y + p.h;
+        const bothStacked = prevBox && nextBox && prevBox.stacked && nextBox.stacked;
+        for (let g = ghostSteps; g >= 1; g--) {
+          if (!bothStacked) continue;
+          const gx = x + g * GS, gy1 = y1 + g * GS, gy2 = y2 + g * GS;
+          const op = g === 2 ? 0.25 : 0.5;
+          ghostLayer += `<line x1="${gx}" y1="${gy1}" x2="${gx}" y2="${gy2}" stroke="var(--border2)" stroke-width="2" stroke-dasharray="6 4" opacity="${op}"/>`;
+        }
+        mainLines += `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="var(--border2)" stroke-width="2"/>`;
+        const ly = (y1 + y2) / 2;
+        const mid = svgW / 2;
+        const lw = p.label.length * 7 + 24;
+        const badgeText = planes > 1 ? `×${planes} planes` : '';
+        const bw = badgeText ? badgeText.length * 6.5 + 14 : 0;
+        const fullW = lw + (bw ? bw + 6 : 0);
+        const lx = mid - fullW / 2;
+        labels += `<rect x="${lx}" y="${ly - 13}" width="${lw}" height="26" rx="13" fill="var(--bg2)" stroke="var(--border2)" stroke-width="1"/>`;
+        labels += `<text x="${lx + lw/2}" y="${ly + 4}" text-anchor="middle" fill="var(--primary)" font-size="12" font-weight="600">${esc(p.label)}</text>`;
+        if (planes > 1) {
+          const bx = lx + lw + 6;
+          labels += `<rect x="${bx}" y="${ly - 9}" width="${bw}" height="18" rx="9" fill="var(--primary)"/>`;
+          labels += `<text x="${bx + bw/2}" y="${ly + 4}" text-anchor="middle" fill="white" font-size="11" font-weight="600">${badgeText}</text>`;
+        }
+      }
+    }
+
+    return `<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg">${ghostLayer}${mainLines}${mainBoxes}${labels}</svg>`;
+  }
+  function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  const diagHeader = '<div class="diagram-wrapper"><div class="diag-title"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> ' + esc(diagTitle) + '</div>';
 
   if (tierNum === 1) {
     totalSpine = planes;
@@ -984,8 +1040,11 @@ function calculate() {
         ['Physical ports used', portsNeeded + ' per plane'],
       ], 'Single tier: GPUs connect directly to the chassis spine.');
 
-      const spineBox = renderBox('1× ' + spinePlatform.name, portsNeeded + ' ports used<br><span style="font-size:12px;opacity:0.8;margin-top:6px;display:block">Populated with ' + cardsNeeded + '× ' + portsPerSlot + '-port line cards</span>');
-      diagramHtml = diagHeader + spineBox + renderLink(hostLinkStr) + nodeBox + '</div>';
+      diagramHtml = diagHeader + buildDiagram([
+        { title: '1× ' + spinePlatform.name, sub: portsNeeded + ' ports used\n' + cardsNeeded + '× ' + portsPerSlot + '-port line cards', stacked: true },
+        { link: hostLinkStr },
+        { title: '1× Compute Node', sub: gpusPerNode + ' GPUs · ' + linksPerNode + ' Backend Links', stacked: false },
+      ], planes) + '</div>';
 
     } else {
       if (portsNeeded > spineRadix) {
@@ -1003,8 +1062,11 @@ function calculate() {
         ['Total switches', totalSpine],
       ], 'Single tier: GPUs connect directly to the spine switch.');
 
-      const spineBox = renderBox('1× ' + spinePlatform.name, spineRadix + '-port<br>' + portsNeeded + ' ports used');
-      diagramHtml = diagHeader + spineBox + renderLink(hostLinkStr) + nodeBox + '</div>';
+      diagramHtml = diagHeader + buildDiagram([
+        { title: '1× ' + spinePlatform.name, sub: spineRadix + '-port\n' + portsNeeded + ' ports used', stacked: true },
+        { link: hostLinkStr },
+        { title: '1× Compute Node', sub: gpusPerNode + ' GPUs · ' + linksPerNode + ' Backend Links', stacked: false },
+      ], planes) + '</div>';
     }
 
     const hOptSwitchBase = Math.ceil(totalHostLinks / breakout);
@@ -1086,10 +1148,14 @@ function calculate() {
 
     optHtml = opticsSection(optRows, 'Spine links: ' + opticType(spineSpeed) + ' · Host links: ' + opticType(hostSpeed) + '.');
 
-    const leafBox = renderBox('1× Leaf Switch', `${leafPlatform.name}<br>${leafRadix}-port`);
-    const spineBox = renderBox('1× Spine Switch', `${spinePlatform.name}<br>${spineRadix}-port`);
     const uplinksStr = `${Number.isInteger(bundleSize) ? bundleSize : bundleSize.toFixed(1)}× ${spineSpeed}G uplinks`;
-    diagramHtml = diagHeader + spineBox + renderLink(uplinksStr) + leafBox + renderLink(hostLinkStr) + nodeBox + '</div>';
+    diagramHtml = diagHeader + buildDiagram([
+      { title: '1× Spine Switch', sub: spinePlatform.name + '\n' + spineRadix + '-port', stacked: true },
+      { link: uplinksStr },
+      { title: '1× Leaf Switch', sub: leafPlatform.name + '\n' + leafRadix + '-port', stacked: true },
+      { link: hostLinkStr },
+      { title: '1× Compute Node', sub: gpusPerNode + ' GPUs · ' + linksPerNode + ' Backend Links', stacked: false },
+    ], planes) + '</div>';
 
   } else {
     const leafRadix   = getRadix('leaf');
@@ -1187,13 +1253,18 @@ function calculate() {
 
     optHtml = opticsSection(optRows, 'Spine/agg links: ' + opticType(spineSpeed) + ' · Host links: ' + opticType(hostSpeed) + '.');
 
-    const leaf2Box = renderBox('1× Edge Leaf Switch', `${leafPlatform.name}<br>${leafRadix}-port`);
-    const leaf1Box = renderBox('1× Agg Leaf Switch', `${leafPlatform.name}<br>${leafRadix}-port`);
-    const spineBox = renderBox('1× Spine Switch', `${spinePlatform.name}<br>${spineRadix}-port`);
     const e2aStr = `${Number.isInteger(e2aBundle) ? e2aBundle : e2aBundle.toFixed(1)}× ${spineSpeed}G links`;
     const a2sStr = `${Number.isInteger(a2sBundle) ? a2sBundle : a2sBundle.toFixed(1)}× ${spineSpeed}G links`;
 
-    diagramHtml = diagHeader + spineBox + renderLink(a2sStr) + leaf1Box + renderLink(e2aStr) + leaf2Box + renderLink(hostLinkStr) + nodeBox + '</div>';
+    diagramHtml = diagHeader + buildDiagram([
+      { title: '1× Spine Switch', sub: spinePlatform.name + '\n' + spineRadix + '-port', stacked: true },
+      { link: a2sStr },
+      { title: '1× Agg Leaf Switch', sub: leafPlatform.name + '\n' + leafRadix + '-port', stacked: true },
+      { link: e2aStr },
+      { title: '1× Edge Leaf Switch', sub: leafPlatform.name + '\n' + leafRadix + '-port', stacked: true },
+      { link: hostLinkStr },
+      { title: '1× Compute Node', sub: gpusPerNode + ' GPUs · ' + linksPerNode + ' Backend Links', stacked: false },
+    ], planes) + '</div>';
   }
 
   const totalSwitches = totalSpine + totalLeaf;
