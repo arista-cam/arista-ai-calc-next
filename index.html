@@ -779,7 +779,7 @@ function autoSelectPlatforms() {
   if (gpus <= 0) return;
 
   const totalHostLinks = gpus * linksPerGpu;
-  const linksPerPlane  = totalHostLinks;
+  const linksPerPlane  = Math.ceil(totalHostLinks / planes);
 
   if (tierNum === 1) {
     autoSelect1Tier(linksPerPlane, breakout);
@@ -814,19 +814,23 @@ function autoSelect1Tier(linksPerPlane, breakout) {
 }
 
 function autoSelect2Tier(linksPerPlane, breakout) {
-  for (const lp of PLATFORMS) {
-    const physDown = Math.floor(lp.radix / 2);
-    const effDown  = physDown * breakout;
-    const uplinks  = lp.radix - physDown;
-    if (effDown <= 0 || uplinks <= 0) continue;
+  for (let pass = 0; pass < 2; pass++) {
+    for (const lp of PLATFORMS) {
+      const physDown = Math.floor(lp.radix / 2);
+      const effDown  = physDown * breakout;
+      const uplinks  = lp.radix - physDown;
+      if (effDown <= 0 || uplinks <= 0) continue;
 
-    const leafPerPlane = Math.ceil(linksPerPlane / effDown);
+      const leafPerPlane = Math.ceil(linksPerPlane / effDown);
+      if (pass === 0 && leafPerPlane > uplinks) continue;
 
-    for (const sp of PLATFORMS) {
-      const spinePerPlane = Math.ceil((leafPerPlane * uplinks) / sp.radix);
-      if (spinePerPlane <= uplinks && uplinks % spinePerPlane === 0) {
-        setPlatformSelection(lp.radix, sp.radix);
-        return;
+      for (const sp of PLATFORMS) {
+        if (pass === 0 && sp.radix < lp.radix) continue;
+        const spinePerPlane = Math.ceil((leafPerPlane * uplinks) / sp.radix);
+        if (spinePerPlane <= uplinks && uplinks % spinePerPlane === 0) {
+          setPlatformSelection(lp.radix, sp.radix);
+          return;
+        }
       }
     }
   }
@@ -835,25 +839,30 @@ function autoSelect2Tier(linksPerPlane, breakout) {
 }
 
 function autoSelect3Tier(linksPerPlane, breakout) {
-  for (const lp of PLATFORMS) {
-    const physDown = Math.floor(lp.radix / 2);
-    const effDown  = physDown * breakout;
-    const uplinks  = lp.radix - physDown;
-    if (effDown <= 0 || uplinks <= 0) continue;
+  for (let pass = 0; pass < 2; pass++) {
+    for (const lp of PLATFORMS) {
+      const physDown = Math.floor(lp.radix / 2);
+      const effDown  = physDown * breakout;
+      const uplinks  = lp.radix - physDown;
+      if (effDown <= 0 || uplinks <= 0) continue;
 
-    const leaf2PerPlane = Math.ceil(linksPerPlane / effDown);
-    const a2sDownlinks  = leaf2PerPlane * uplinks;
-    const leaf1PerPlane = Math.ceil(a2sDownlinks / physDown);
+      const leaf2PerPlane = Math.ceil(linksPerPlane / effDown);
+      if (pass === 0 && leaf2PerPlane > uplinks) continue;
 
-    if (leaf1PerPlane > uplinks || uplinks % leaf1PerPlane !== 0) continue;
+      const a2sDownlinks  = leaf2PerPlane * uplinks;
+      const leaf1PerPlane = Math.ceil(a2sDownlinks / physDown);
 
-    const spinePortsNeeded = leaf1PerPlane * uplinks;
+      if (leaf1PerPlane > uplinks || uplinks % leaf1PerPlane !== 0) continue;
 
-    for (const sp of PLATFORMS) {
-      const spinePerPlane = Math.ceil(spinePortsNeeded / sp.radix);
-      if (spinePerPlane <= uplinks && uplinks % spinePerPlane === 0) {
-        setPlatformSelection(lp.radix, sp.radix);
-        return;
+      const spinePortsNeeded = leaf1PerPlane * uplinks;
+
+      for (const sp of PLATFORMS) {
+        if (pass === 0 && sp.radix < lp.radix) continue;
+        const spinePerPlane = Math.ceil(spinePortsNeeded / sp.radix);
+        if (spinePerPlane <= uplinks && uplinks % spinePerPlane === 0) {
+          setPlatformSelection(lp.radix, sp.radix);
+          return;
+        }
       }
     }
   }
