@@ -977,7 +977,7 @@ function calculate() {
   const gpus   = totalGPUs || hosts * gpusPerNode;
   
   const totalHostLinks = gpus * linksPerGpu;
-  const linksPerPlane  = totalHostLinks;
+  const linksPerPlane  = Math.ceil(totalHostLinks / planes);
 
   // Leaf switch topology math
   const physDownlinks = Math.floor(leafRadix * oversub / (1 + oversub));
