@@ -486,6 +486,14 @@
       <input type="number" id="oversub" min="0.25" max="4" step="0.25" value="1" oninput="clearResults()">
       <span class="hint">1 = non-blocking, &lt;1 = more uplinks</span>
     </div>
+    <div class="input-row" id="balance-row">
+      <label>Balance topology</label>
+      <select id="balance-topo" onchange="clearResults()">
+        <option value="1" selected>Yes (adjust spine count)</option>
+        <option value="0">No (minimum spines)</option>
+      </select>
+      <span class="hint">even link distribution</span>
+    </div>
     <div class="input-row">
       <label>Host port breakout</label>
       <select id="breakout" onchange="autoSelectPlatforms()">
@@ -880,17 +888,20 @@ function updateTierHint() {
   const spineRow = document.getElementById('spine-radix-row');
   const portsRow = document.getElementById('single-tier-ports-row');
   const spineSpeedRow = document.getElementById('spine-speed-row');
+  const balanceRow = document.getElementById('balance-row');
 
   if (t === '1') {
     leafRow.style.display = 'none';
     spineRow.style.display = 'flex';
     portsRow.style.display = 'none';
     spineSpeedRow.style.display = 'none';
+    balanceRow.style.display = 'none';
   } else {
     leafRow.style.display = 'flex';
     spineRow.style.display = 'flex';
     portsRow.style.display = 'none';
     spineSpeedRow.style.display = 'flex';
+    balanceRow.style.display = 'flex';
   }
   autoSelectPlatforms();
 }
@@ -946,6 +957,13 @@ function opticsSection(rows, noteText) {
   }
   s += '</table><div class="note-box">' + noteText + '</div></div>';
   return s;
+}
+
+function nextDivisorGte(min, n) {
+  for (let d = min; d <= n; d++) {
+    if (n % d === 0) return d;
+  }
+  return min;
 }
 
 function calculate() {
@@ -1180,9 +1198,16 @@ function calculate() {
   } else if (tierNum === 2) {
     const leafPerPlane  = Math.ceil(linksPerPlane / effDownlinks);
     totalLeaf           = leafPerPlane * planes;
-    const spinePerPlane = Math.ceil((leafPerPlane * uplinks) / spineRadix);
+    const balance       = document.getElementById('balance-topo').value === '1';
+    const origSpinePP   = Math.ceil((leafPerPlane * uplinks) / spineRadix);
+    let spinePerPlane   = origSpinePP;
+    let balanceNote     = '';
+    if (balance && uplinks > 0 && uplinks % spinePerPlane !== 0) {
+      spinePerPlane = nextDivisorGte(spinePerPlane, uplinks);
+      balanceNote = 'Spine count adjusted from ' + origSpinePP + ' to ' + spinePerPlane + ' per plane for even link distribution (' + (uplinks / spinePerPlane) + ' links per leaf-spine pair). Adds ' + ((spinePerPlane - origSpinePP) * planes) + ' extra spine switch' + ((spinePerPlane - origSpinePP) * planes !== 1 ? 'es' : '') + '.';
+    }
     totalSpine          = spinePerPlane * planes;
-    
+
     const bundleSize    = uplinks / spinePerPlane;
     const bundleStr     = Number.isInteger(bundleSize) ? bundleSize : bundleSize.toFixed(2) + ' (unbalanced)';
     
@@ -1207,7 +1232,7 @@ function calculate() {
       const minCombo = minBalanced2Tier(linksPerPlane, breakout, oversub);
       let suggestion = '';
       if (minCombo) suggestion = ' Minimum balanced topology: leaf <strong>' + minCombo.leaf.desc + '</strong>, spine <strong>' + minCombo.spine.desc + '</strong>.';
-      leafNote = '<span style="color:var(--coral600);font-weight:600">Warning:</span> Uplinks do not divide evenly across spines (' + bundleSize.toFixed(2) + ' links per spine). This topology is unbalanced.' + suggestion;
+      leafNote = '<span style="color:var(--coral600);font-weight:600">Warning:</span> Uplinks do not divide evenly across spines (' + bundleSize.toFixed(2) + ' links per spine). This topology is unbalanced.' + suggestion + ' Enable <strong>Balance topology</strong> to auto-adjust.';
     }
 
     switchHtml  = mkSection(iconServer(), 'Spine layer', [
@@ -1223,6 +1248,7 @@ function calculate() {
       ['Total uplinks used', uplinks],
       ['Links per spine (bundle)', bundleStr],
     ], leafNote);
+    if (balanceNote) switchHtml += '<div class="note-box" style="margin-bottom:16px">' + balanceNote + '</div>';
 
     let optRows = [
       ['Leaf ↔ spine links', fmtN(spineLinks)],
@@ -1262,13 +1288,30 @@ function calculate() {
     const totalLeaf2    = leaf2PerPlane * planes;
     
     const a2sDownlinksNeeded = leaf2PerPlane * uplinks;
-    const leaf1PerPlane = Math.ceil(a2sDownlinksNeeded / physDownlinks);
+    const balance3      = document.getElementById('balance-topo').value === '1';
+    const origLeaf1PP   = Math.ceil(a2sDownlinksNeeded / physDownlinks);
+    let leaf1PerPlane   = origLeaf1PP;
+    if (balance3 && uplinks > 0 && uplinks % leaf1PerPlane !== 0) {
+      leaf1PerPlane = nextDivisorGte(leaf1PerPlane, uplinks);
+    }
     const totalLeaf1    = leaf1PerPlane * planes;
-    
+
     const spinePortsNeeded = leaf1PerPlane * uplinks;
-    const spinePerPlane = Math.ceil(spinePortsNeeded / spineRadix);
+    const origSpinePP3  = Math.ceil(spinePortsNeeded / spineRadix);
+    let spinePerPlane   = origSpinePP3;
+    if (balance3 && uplinks > 0 && uplinks % spinePerPlane !== 0) {
+      spinePerPlane = nextDivisorGte(spinePerPlane, uplinks);
+    }
     totalSpine          = spinePerPlane * planes;
-    
+
+    let balance3Note    = '';
+    if (balance3 && (leaf1PerPlane !== origLeaf1PP || spinePerPlane !== origSpinePP3)) {
+      const parts = [];
+      if (leaf1PerPlane !== origLeaf1PP) parts.push('agg leaves ' + origLeaf1PP + ' → ' + leaf1PerPlane);
+      if (spinePerPlane !== origSpinePP3) parts.push('spines ' + origSpinePP3 + ' → ' + spinePerPlane);
+      balance3Note = 'Balanced per plane: ' + parts.join(', ') + ' for even link distribution.';
+    }
+
     const e2aBundle     = uplinks / leaf1PerPlane;
     const e2aBundleStr  = Number.isInteger(e2aBundle) ? e2aBundle : e2aBundle.toFixed(2) + ' (unbalanced)';
     
@@ -1302,10 +1345,10 @@ function calculate() {
       let suggestion = '';
       if (minCombo) suggestion = ' Minimum balanced topology: leaf <strong>' + minCombo.leaf.desc + '</strong>, spine <strong>' + minCombo.spine.desc + '</strong>.';
       if (!Number.isInteger(e2aBundle)) {
-        warnHtml += '<div class="warn-box">Edge-to-agg uplinks (' + e2aBundle.toFixed(2) + ') do not divide evenly — this topology is unbalanced at the aggregation layer.' + suggestion + '</div>';
+        warnHtml += '<div class="warn-box">Edge-to-agg uplinks (' + e2aBundle.toFixed(2) + ') do not divide evenly — this topology is unbalanced at the aggregation layer.' + suggestion + ' Enable <strong>Balance topology</strong> to auto-adjust.</div>';
       }
       if (!Number.isInteger(a2sBundle)) {
-        warnHtml += '<div class="warn-box">Agg-to-spine uplinks (' + a2sBundle.toFixed(2) + ') do not divide evenly — this topology is unbalanced at the spine layer.' + suggestion + '</div>';
+        warnHtml += '<div class="warn-box">Agg-to-spine uplinks (' + a2sBundle.toFixed(2) + ') do not divide evenly — this topology is unbalanced at the spine layer.' + suggestion + ' Enable <strong>Balance topology</strong> to auto-adjust.</div>';
       }
     }
 
@@ -1324,6 +1367,7 @@ function calculate() {
       ['Host links per edge', Math.ceil(linksPerPlane / leaf2PerPlane) + (breakout > 1 ? ` (via ${breakout}:1)` : '')],
       ['Links per agg leaf (bundle)', e2aBundleStr],
     ], 'Three-tier Clos scale-out topology.');
+    if (balance3Note) switchHtml += '<div class="note-box" style="margin-bottom:16px">' + balance3Note + '</div>';
 
     let optRows = [
       ['Agg leaf ↔ spine links', fmtN(a2sLinks)],
@@ -1369,6 +1413,10 @@ function calculate() {
   out += metric(fmtN(totalSpine),    'Spine switches', 'across planes');
   out += metric(totalLeaf > 0 ? fmtN(totalLeaf) : '—', 'Leaf switches', totalLeaf > 0 ? 'across planes' : 'not needed');
   out += metric(fmtN(totalSwitches), 'Total switches', 'all tiers');
+  if (tierNum >= 2) {
+    const subRatio = physDownlinks / uplinks;
+    out += metric(subRatio === 1 ? '1:1' : subRatio.toFixed(2) + ':1', 'Subscription', 'down:up port ratio');
+  }
   out += '</div>';
   out += switchHtml + diagramHtml + optHtml;
 
