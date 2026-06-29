@@ -5,30 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Backend Network Calculator</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
     --bg: #ffffff;
-    --bg2: #f8f9fb;
-    --bg3: #f0f2f5;
+    --bg2: #f7f8fa;
+    --bg3: #eef0f4;
     --panel-bg: #ffffff;
-    --text: #111827;
-    --text2: #4b5563;
-    --text3: #9ca3af;
-    --border: #e5e7eb;
-    --border2: #d1d5db;
+    --text: #1a1a2e;
+    --text2: #4a4a68;
+    --text3: #8b8fa8;
+    --border: #dde0e8;
+    --border2: #c8ccd6;
 
-    --primary: #0d9488;
-    --primary-hover: #0f766e;
-    --primary-light: #ccfbf1;
-    --primary-text: #134e4a;
-    --primary-glow: rgba(13, 148, 136, 0.15);
+    --primary: #0065A3;
+    --primary-hover: #004f80;
+    --primary-light: #e6f1f8;
+    --primary-text: #003d66;
+    --primary-glow: rgba(0, 101, 163, 0.15);
 
-    --teal50: #ecfdf5; --teal600: #059669; --teal800: #065f46;
+    --accent: #6CC24A;
+    --accent-hover: #5aad3a;
+
+    --teal50: #edf7ed; --teal600: #5aad3a; --teal800: #3d7a28;
     --coral50: #fef2f2; --coral600: #dc2626; --coral800: #991b1b;
-    --info-bg: #f0f9ff; --info-text: #0c4a6e; --info-border: #0ea5e9;
+    --info-bg: #e6f1f8; --info-text: #003d66; --info-border: #0065A3;
 
     --radius: 8px;
     --radius-lg: 12px;
@@ -42,25 +45,28 @@
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #111827;
-      --bg2: #1f2937;
-      --bg3: #0f172a;
-      --panel-bg: #1f2937;
-      --text: #f9fafb;
-      --text2: #d1d5db;
-      --text3: #6b7280;
-      --border: #374151;
-      --border2: #4b5563;
+      --bg: #121a2b;
+      --bg2: #1a2540;
+      --bg3: #0c1220;
+      --panel-bg: #1a2540;
+      --text: #f0f2f8;
+      --text2: #b8bdd0;
+      --text3: #6b7294;
+      --border: #2a3554;
+      --border2: #3d4a6a;
 
-      --primary: #2dd4bf;
-      --primary-hover: #14b8a6;
-      --primary-light: #042f2e;
-      --primary-text: #99f6e4;
-      --primary-glow: rgba(45, 212, 191, 0.12);
+      --primary: #4da6e0;
+      --primary-hover: #3b94ce;
+      --primary-light: #0d2240;
+      --primary-text: #a3d4f5;
+      --primary-glow: rgba(77, 166, 224, 0.15);
 
-      --teal50: #064e3b; --teal800: #34d399;
-      --coral50: #450a0a; --coral800: #fca5a5;
-      --info-bg: #0c4a6e; --info-text: #bae6fd; --info-border: #0ea5e9;
+      --accent: #7ed95c;
+      --accent-hover: #6cc24a;
+
+      --teal50: #1a3a2a; --teal800: #7ed95c;
+      --coral50: #3a1a1a; --coral800: #fca5a5;
+      --info-bg: #0d2240; --info-text: #a3d4f5; --info-border: #4da6e0;
 
       --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
       --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -69,25 +75,28 @@
   }
 
   :root[data-theme="dark"] {
-    --bg: #111827;
-    --bg2: #1f2937;
-    --bg3: #0f172a;
-    --panel-bg: #1f2937;
-    --text: #f9fafb;
-    --text2: #d1d5db;
-    --text3: #6b7280;
-    --border: #374151;
-    --border2: #4b5563;
+    --bg: #121a2b;
+    --bg2: #1a2540;
+    --bg3: #0c1220;
+    --panel-bg: #1a2540;
+    --text: #f0f2f8;
+    --text2: #b8bdd0;
+    --text3: #6b7294;
+    --border: #2a3554;
+    --border2: #3d4a6a;
 
-    --primary: #2dd4bf;
-    --primary-hover: #14b8a6;
-    --primary-light: #042f2e;
-    --primary-text: #99f6e4;
-    --primary-glow: rgba(45, 212, 191, 0.12);
+    --primary: #4da6e0;
+    --primary-hover: #3b94ce;
+    --primary-light: #0d2240;
+    --primary-text: #a3d4f5;
+    --primary-glow: rgba(77, 166, 224, 0.15);
 
-    --teal50: #064e3b; --teal800: #34d399;
-    --coral50: #450a0a; --coral800: #fca5a5;
-    --info-bg: #0c4a6e; --info-text: #bae6fd; --info-border: #0ea5e9;
+    --accent: #7ed95c;
+    --accent-hover: #6cc24a;
+
+    --teal50: #1a3a2a; --teal800: #7ed95c;
+    --coral50: #3a1a1a; --coral800: #fca5a5;
+    --info-bg: #0d2240; --info-text: #a3d4f5; --info-border: #4da6e0;
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -95,7 +104,7 @@
   }
 
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Barlow', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--bg3);
     color: var(--text);
     margin: 0;
@@ -371,6 +380,7 @@
   .tier-1 { background: var(--teal50); color: var(--teal800); border: 1px solid rgba(5, 150, 105, 0.2); }
   .tier-2 { background: var(--primary-light); color: var(--primary-text); border: 1px solid var(--primary-glow); }
   .tier-3 { background: var(--coral50); color: var(--coral800); border: 1px solid rgba(220, 38, 38, 0.15); }
+  .tier-des { background: var(--teal50); color: var(--teal800); border: 1px solid rgba(108, 194, 74, 0.25); }
 
   .metrics-grid {
     display: grid;
@@ -450,7 +460,7 @@
   }
   .diag-title svg { width: 14px; height: 14px; stroke: var(--primary); fill: none; stroke-width: 2; }
   .diagram-wrapper > svg { width: 100%; height: auto; margin: 0 auto; display: block; }
-  .diagram-wrapper svg text { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .diagram-wrapper svg text { font-family: 'Barlow', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
   /* ── AROC button & modal ── */
   .aroc-btn {
@@ -674,6 +684,14 @@
                 <div class="tier-opt-range">74K+</div>
               </div>
             </label>
+            <label class="tier-opt">
+              <input type="radio" name="tier" value="4" onchange="updateTierHint()">
+              <div class="tier-opt-inner">
+                <div class="tier-opt-icon">&#9638;</div>
+                <div class="tier-opt-name">DES</div>
+                <div class="tier-opt-range">&le; 4,608</div>
+              </div>
+            </label>
           </div>
           <div class="tier-hint" id="tier-hint">Leaf-spine Clos — the standard for most AI training clusters.</div>
         </div>
@@ -715,7 +733,7 @@
               <input type="number" id="planes" min="1" max="8" value="1" oninput="autoSelectPlatforms()">
               <div class="hint">redundant fabrics</div>
             </div>
-            <div class="field">
+            <div class="field" id="oversub-field">
               <label>Down:Up ratio</label>
               <input type="number" id="oversub" min="0.25" max="4" step="0.25" value="1" oninput="clearResults()">
               <div class="hint">1 = non-blocking</div>
@@ -874,14 +892,13 @@ function toggleTheme() {
 const TIER_HINTS = {
   '1': 'Collapsed spine — hosts connect directly to modular chassis. Simple, low latency, suits small clusters.',
   '2': 'Leaf-spine Clos — the standard for most AI training clusters. Full ECMP mesh, 1:1 non-blocking.',
-  '3': 'Three-tier Clos — hyperscale fabric for very large clusters. Pod-based for blast-radius containment.'
+  '3': 'Three-tier Clos — hyperscale fabric for very large clusters. Pod-based for blast-radius containment.',
+  '4': '7700R4 Distributed Etherlink — cell-based scheduled fabric presenting as a single non-blocking switch.'
 };
 
 const PLATFORMS = [
   { name: '7060X6',        radix: 32,  type: 'fixed',   desc: '7060X6 (32-port)' },
-  { name: '7700R4',        radix: 38,  type: 'fixed',   desc: '7700R4 (38-port)' },
   { name: '7060X6',        radix: 64,  type: 'fixed',   desc: '7060X6 (64-port)' },
-  { name: '7700R4',        radix: 128, type: 'fixed',   desc: '7700R4 (128-port)' },
   { name: '7800R4 4-slot', radix: 144, type: 'chassis', desc: '7800R4 4-slot (144-port)',  slots: 4,  portsPerSlot: 36 },
   { name: '7800R4 8-slot', radix: 288, type: 'chassis', desc: '7800R4 8-slot (288-port)',  slots: 8,  portsPerSlot: 36 },
   { name: '7800R4 12-slot',radix: 432, type: 'chassis', desc: '7800R4 12-slot (432-port)', slots: 12, portsPerSlot: 36 },
@@ -1047,6 +1064,7 @@ function autoSelectPlatforms() {
   clearResults();
   suggestionDismissed = false;
   const tierNum = parseInt(document.querySelector('input[name=tier]:checked').value);
+  if (tierNum === 4) return;
 
   const totalGPUs   = parseInt(document.getElementById('total-gpus').value) || 0;
   const numNodes    = parseInt(document.getElementById('num-nodes').value) || 0;
@@ -1199,20 +1217,34 @@ function updateTierHint() {
   const portsRow = document.getElementById('single-tier-ports-row');
   const spineSpeedRow = document.getElementById('spine-speed-row');
   const balanceRow = document.getElementById('balance-row');
+  const oversubField = document.getElementById('oversub-field');
+  const suggestionBanner = document.getElementById('platform-suggestion');
 
-  if (t === '1') {
+  if (t === '4') {
+    leafRow.style.display = 'none';
+    spineRow.style.display = 'none';
+    portsRow.style.display = 'none';
+    spineSpeedRow.style.display = 'none';
+    balanceRow.style.display = 'none';
+    oversubField.style.display = 'none';
+    suggestionBanner.style.display = 'none';
+    pendingSuggestion = null;
+  } else if (t === '1') {
     leafRow.style.display = 'none';
     spineRow.style.display = 'block';
     portsRow.style.display = 'none';
     spineSpeedRow.style.display = 'none';
     balanceRow.style.display = 'none';
+    oversubField.style.display = 'block';
   } else {
     leafRow.style.display = 'block';
     spineRow.style.display = 'block';
     portsRow.style.display = 'none';
     spineSpeedRow.style.display = 'block';
     balanceRow.style.display = 'block';
+    oversubField.style.display = 'block';
   }
+  syncBreakoutOptions();
   autoSelectPlatforms();
 }
 
@@ -1251,6 +1283,19 @@ function syncBreakout() {
       breakoutSelect.value = breakoutSelect.dataset.savedValue;
       delete breakoutSelect.dataset.savedValue;
     }
+  }
+}
+
+function syncBreakoutOptions() {
+  const tierNum = parseInt(document.querySelector('input[name=tier]:checked').value);
+  const opt4 = document.querySelector('#breakout option[value="4"]');
+  if (!opt4) return;
+  if (tierNum === 4) {
+    opt4.disabled = true;
+    const breakoutSelect = document.getElementById('breakout');
+    if (breakoutSelect.value === '4') breakoutSelect.value = '2';
+  } else {
+    opt4.disabled = false;
   }
 }
 
@@ -1318,7 +1363,9 @@ function calculate() {
   let leafRadix = 64, spineRadix = 64;
   let leafPlatform = null, spinePlatform = null;
 
-  if (tierNum === 1) {
+  if (tierNum === 4) {
+    // DES: fixed architecture, no platform selection
+  } else if (tierNum === 1) {
     spineRadix = getRadix('spine');
     spinePlatform = isCustomPlatform('spine') ? { name: 'Custom', radix: spineRadix, type: 'custom', desc: spineRadix + '-port (custom)' } : getPlatformByRadix(spineRadix);
   } else {
@@ -1338,8 +1385,8 @@ function calculate() {
   const effDownlinks  = physDownlinks * breakout;
   const uplinks       = leafRadix - physDownlinks;
 
-  const tierLabels = { 1: 'Single-tier (collapsed spine)', 2: 'Two-tier (leaf-spine)', 3: 'Three-tier (spine-leaf-leaf)' };
-  const tierColors = { 1: 'tier-1', 2: 'tier-2', 3: 'tier-3' };
+  const tierLabels = { 1: 'Single-tier (collapsed spine)', 2: 'Two-tier (leaf-spine)', 3: 'Three-tier (spine-leaf-leaf)', 4: 'DES (Distributed Etherlink)' };
+  const tierColors = { 1: 'tier-1', 2: 'tier-2', 3: 'tier-3', 4: 'tier-des' };
 
   let warnHtml = '';
 
@@ -1348,7 +1395,7 @@ function calculate() {
   if (tierNum === 3 && gpus < 10000)
     warnHtml += '<div class="warn-box">Three-tier is typically used for 74K+ GPU clusters. Two-tier may be simpler and more cost-effective at ' + fmtN(gpus) + ' GPUs.</div>';
 
-  if (tierNum >= 2) {
+  if (tierNum >= 2 && tierNum <= 3) {
     if (physDownlinks <= 0) {
       el.innerHTML = '<div class="error-msg">Invalid configuration: the downlink:uplink ratio (' + oversub +
         ') leaves zero downlink ports on a ' + leafRadix + '-port leaf. Increase the ratio or choose a larger leaf switch.</div>';
@@ -1600,7 +1647,7 @@ function calculate() {
       { title: '1× Compute Node', sub: gpusPerNode + ' GPUs · ' + linksPerNode + ' Backend Links', stacked: false },
     ], planes) + '</div>';
 
-  } else {
+  } else if (tierNum === 3) {
     const leafRadix   = getRadix('leaf');
     const spineRadix  = getRadix('spine');
 
@@ -1726,6 +1773,69 @@ function calculate() {
       { link: hostLinkStr },
       { title: '1× Compute Node', sub: gpusPerNode + ' GPUs · ' + linksPerNode + ' Backend Links', stacked: false },
     ], planes) + '</div>';
+
+  }
+
+  if (tierNum === 4) {
+    const DES_ETH_PORTS = 18;
+    const DES_FABRIC_PORTS = 20;
+    const DES_SPINE_PORTS = 128;
+    const DES_MAX_LEAVES = 128;
+    const DES_MAX_SPINES = 40;
+
+    const effPortsPerLeaf = DES_ETH_PORTS * breakout;
+    const desLeafPerPlane = Math.ceil(linksPerPlane / effPortsPerLeaf);
+
+    if (desLeafPerPlane > DES_MAX_LEAVES) {
+      const maxGpus = DES_MAX_LEAVES * effPortsPerLeaf * planes / linksPerGpu;
+      el.innerHTML = '<div class="error-msg">Exceeds one-stage DES capacity (' + DES_MAX_LEAVES + ' leaves per plane). ' +
+        'Maximum ~' + fmtN(maxGpus) + ' GPUs with current settings. Reduce GPU count, increase planes, or enable breakout.</div>';
+      return;
+    }
+
+    const desSpinePerPlane = Math.min(DES_MAX_SPINES, Math.ceil(desLeafPerPlane * DES_FABRIC_PORTS / DES_SPINE_PORTS));
+    const fabricLinksPerPair = Math.floor(DES_FABRIC_PORTS / desSpinePerPlane);
+    const portsUsedPerLeaf = Math.ceil(linksPerPlane / desLeafPerPlane / breakout);
+
+    totalLeaf = desLeafPerPlane * planes;
+    totalSpine = desSpinePerPlane * planes;
+
+    switchHtml = mkSection(iconServer(), 'DES Cluster', [
+      ['Leaf (DCS-DL-7700R4)', fmtN(desLeafPerPlane) + ' per plane'],
+      ['Ethernet ports used', portsUsedPerLeaf + ' of ' + DES_ETH_PORTS + ' per leaf'],
+      ['Spine (DCS-DS-7720R4)', fmtN(desSpinePerPlane) + ' per plane'],
+      ['Fabric links per leaf↔spine', fabricLinksPerPair],
+      ['Planes', planes],
+      ['Total leaves', fmtN(totalLeaf)],
+      ['Total spines', fmtN(totalSpine)],
+    ], 'Non-blocking cell-based scheduled fabric presenting as a single logical switch.');
+
+    const fabricOpticsTotal = totalLeaf * DES_FABRIC_PORTS * 2;
+    const hOptSwitchBase = Math.ceil(totalHostLinks / breakout);
+    const hOptHostBase = totalHostLinks;
+
+    let optRows = [['Host ↔ leaf links', fmtN(totalHostLinks)]];
+    if (breakout === 1) {
+      optRows.push(['Host optics (×2 ends) · ' + opticType(hostSpeed), fmtN(hOptSwitchBase + hOptHostBase)]);
+    } else {
+      optRows.push(['Leaf-end breakout optics (' + breakout + ':1)', fmtN(hOptSwitchBase)]);
+      optRows.push(['Host-end optics · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+    }
+    optRows.push(['Host optics subtotal', fmtN(hOptSwitchBase + hOptHostBase), true]);
+    optRows.push(['Leaf ↔ spine fabric links', fmtN(totalLeaf * DES_FABRIC_PORTS), false, true]);
+    optRows.push(['Fabric optics (×2 ends) · OSFP 800G', fmtN(fabricOpticsTotal)]);
+    optRows.push(['Grand total optics', fmtN(hOptSwitchBase + hOptHostBase + fabricOpticsTotal), true]);
+
+    optHtml = opticsSection(optRows, 'Host links: ' + opticType(hostSpeed) + ' · Fabric links: OSFP 800G.');
+
+    const fabricStr = DES_FABRIC_PORTS + '× 800G fabric links';
+    diagramHtml = diagHeader + buildDiagram([
+      { title: '1× DES Spine', sub: 'DCS-DS-7720R4\n128 fabric ports', stacked: true },
+      { link: fabricStr },
+      { title: '1× DES Leaf', sub: 'DCS-DL-7700R4\n' + portsUsedPerLeaf + '/' + DES_ETH_PORTS + ' Ethernet ports', stacked: true },
+      { link: hostLinkStr },
+      { title: '1× Compute Node', sub: gpusPerNode + ' GPUs · ' + linksPerNode + ' Backend Links', stacked: false },
+    ], planes) + '</div>';
   }
 
   const totalSwitches = totalSpine + totalLeaf;
@@ -1734,19 +1844,28 @@ function calculate() {
   out += '<div class="metrics-grid">';
   out += metric(fmtN(gpus),          'Total GPUs',     '');
   out += metric(fmtN(totalHostLinks),'Backend Links',   linksPerGpu + ' per GPU');
-  out += metric(fmtN(totalSpine),    'Spine switches', 'across planes');
-  out += metric(totalLeaf > 0 ? fmtN(totalLeaf) : '—', 'Leaf switches', totalLeaf > 0 ? 'across planes' : 'not needed');
-  out += metric(fmtN(totalSwitches), 'Total switches', 'all tiers');
-  if (tierNum >= 2) {
-    const subRatio = physDownlinks / uplinks;
-    out += metric(subRatio === 1 ? '1:1' : subRatio.toFixed(2) + ':1', 'Subscription', 'down:up port ratio');
+  if (tierNum === 4) {
+    out += metric(fmtN(totalLeaf),   'DES Leaves',      'across planes');
+    out += metric(fmtN(totalSpine),  'DES Spines',      'across planes');
+    out += metric(fmtN(totalSwitches), 'Total devices', '');
+    out += metric('1:1', 'Subscription', 'non-blocking fabric');
+  } else {
+    out += metric(fmtN(totalSpine),    'Spine switches', 'across planes');
+    out += metric(totalLeaf > 0 ? fmtN(totalLeaf) : '—', 'Leaf switches', totalLeaf > 0 ? 'across planes' : 'not needed');
+    out += metric(fmtN(totalSwitches), 'Total switches', 'all tiers');
+    if (tierNum >= 2 && tierNum <= 3) {
+      const subRatio = physDownlinks / uplinks;
+      out += metric(subRatio === 1 ? '1:1' : subRatio.toFixed(2) + ':1', 'Subscription', 'down:up port ratio');
+    }
   }
   out += '</div>';
   out += switchHtml + optHtml;
 
-  const hasCustom = document.getElementById('spine-radix').value === 'other' || (tierNum >= 2 && document.getElementById('leaf-radix').value === 'other');
-  buildCalcResult(tierNum, { spinePlatform, leafPlatform, totalSpine, totalLeaf, spineSpeed, hostSpeed, breakout, totalHostLinks, planes });
-  if (!hasCustom) out += '<button class="aroc-btn" onclick="openArocModal()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Export to AROC</button>';
+  if (tierNum !== 4) {
+    const hasCustom = document.getElementById('spine-radix').value === 'other' || (tierNum >= 2 && document.getElementById('leaf-radix').value === 'other');
+    buildCalcResult(tierNum, { spinePlatform, leafPlatform, totalSpine, totalLeaf, spineSpeed, hostSpeed, breakout, totalHostLinks, planes });
+    if (!hasCustom) out += '<button class="aroc-btn" onclick="openArocModal()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Export to AROC</button>';
+  }
 
   el.innerHTML = out;
   document.getElementById('diagram-panel').innerHTML = diagramHtml;
