@@ -191,7 +191,6 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--bg);
-    overflow: hidden;
   }
   .input-section-header {
     display: flex; align-items: center; gap: 8px;
@@ -283,13 +282,35 @@
   .tier-opt input:checked + .tier-opt-inner .tier-opt-range { color: var(--primary); }
   .tier-hint { font-size: 11px; color: var(--text3); min-height: 14px; font-style: italic; line-height: 1.4; }
 
-  /* ── Platform suggestion banner ── */
+  /* ── Platform suggestion popover ── */
+  /* ── Platform suggestion popover ── */
   .platform-suggestion {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--info-bg); border-left: 3px solid var(--info-border);
-    border-radius: 0 var(--radius) var(--radius) 0;
-    padding: 8px 10px; font-size: 11px; color: var(--info-text);
-    line-height: 1.4; margin-top: 4px;
+    position: fixed;
+    z-index: 150;
+    width: max-content;
+    max-width: 260px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: var(--info-bg); border: 1px solid var(--info-border);
+    border-radius: var(--radius);
+    padding: 10px 12px; font-size: 11px; color: var(--info-text);
+    line-height: 1.4;
+    box-shadow: var(--shadow-lg);
+    animation: popIn 0.15s ease-out;
+  }
+  .platform-suggestion::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 10px; height: 10px;
+    background: var(--info-bg);
+    border-left: 1px solid var(--info-border);
+    border-bottom: 1px solid var(--info-border);
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: translateX(-4px); }
+    to   { opacity: 1; transform: translateX(0); }
   }
   .platform-suggestion span { flex: 1; }
   .suggestion-apply {
@@ -624,11 +645,6 @@
             <input type="number" id="spine-radix-custom" min="2" max="1024" step="2" placeholder="ports" style="display:none; margin-top:4px" oninput="clearResults()">
             <div class="hint" id="spine-radix-hint">Arista 800G platform</div>
           </div>
-          <div id="platform-suggestion" class="platform-suggestion" style="display:none">
-            <span id="platform-suggestion-text"></span>
-            <button type="button" class="suggestion-apply" onclick="applySuggestion()">Apply</button>
-            <button type="button" class="suggestion-dismiss" onclick="dismissSuggestion()">&times;</button>
-          </div>
           <div class="field" id="single-tier-ports-row" style="display:none">
             <label>Ports per line card</label>
             <input type="number" id="linecard-ports" min="16" max="36" value="36" step="4">
@@ -720,6 +736,21 @@
   </main>
 </div>
 
+<div id="suggestion-leaf" class="platform-suggestion" style="display:none">
+  <span id="suggestion-leaf-text"></span>
+  <div style="display:flex;gap:6px;align-items:center">
+    <button type="button" class="suggestion-apply" onclick="applySuggestionFor('leaf')">Apply</button>
+    <button type="button" class="suggestion-dismiss" onclick="dismissSuggestionFor('leaf')">&times;</button>
+  </div>
+</div>
+<div id="suggestion-spine" class="platform-suggestion" style="display:none">
+  <span id="suggestion-spine-text"></span>
+  <div style="display:flex;gap:6px;align-items:center">
+    <button type="button" class="suggestion-apply" onclick="applySuggestionFor('spine')">Apply</button>
+    <button type="button" class="suggestion-dismiss" onclick="dismissSuggestionFor('spine')">&times;</button>
+  </div>
+</div>
+
 <script>
 function toggleSection(id) {
   document.getElementById(id).classList.toggle('collapsed');
@@ -799,8 +830,7 @@ function toggleCustomRadix(role) {
   const isCustom = select.value === 'other';
   custom.style.display = isCustom ? 'block' : 'none';
   hint.textContent = isCustom ? 'custom port count' : 'Arista 800G platform';
-  document.getElementById('platform-suggestion').style.display = 'none';
-  pendingSuggestion = null;
+  hideSuggestions();
 }
 
 function minPlatformForPorts(portsNeeded) {
@@ -889,45 +919,84 @@ function setPlatformSelection(leafRadix, spineRadix) {
   document.getElementById('spine-radix-custom').style.display = 'none';
 }
 
+function hideSuggestions() {
+  document.getElementById('suggestion-leaf').style.display = 'none';
+  document.getElementById('suggestion-spine').style.display = 'none';
+  pendingSuggestion = null;
+}
+
 function showPlatformSuggestion(leafRadix, spineRadix) {
   const tierNum = parseInt(document.querySelector('input[name=tier]:checked').value);
-  const banner = document.getElementById('platform-suggestion');
-  const textEl = document.getElementById('platform-suggestion-text');
   const currentSpine = document.getElementById('spine-radix').value;
   const currentLeaf = document.getElementById('leaf-radix').value;
   const spineMatch = String(currentSpine) === String(spineRadix);
   const leafMatch = tierNum === 1 || String(currentLeaf) === String(leafRadix);
-  if (spineMatch && leafMatch) {
-    banner.style.display = 'none';
-    pendingSuggestion = null;
-    return;
-  }
-  if (suggestionDismissed) { banner.style.display = 'none'; return; }
+
+  if (spineMatch && leafMatch) { hideSuggestions(); return; }
+  if (suggestionDismissed) { hideSuggestions(); return; }
+
   pendingSuggestion = { leafRadix, spineRadix };
-  const sp = getPlatformByRadix(spineRadix);
-  let msg;
-  if (tierNum === 1) {
-    msg = 'Suggested: <strong>' + sp.desc + '</strong>';
+
+  const spinePop = document.getElementById('suggestion-spine');
+  const spineText = document.getElementById('suggestion-spine-text');
+  if (!spineMatch) {
+    const sp = getPlatformByRadix(spineRadix);
+    spineText.innerHTML = 'Suggested: <strong>' + sp.desc + '</strong>';
+    spinePop.style.display = 'flex';
   } else {
-    const lp = getPlatformByRadix(leafRadix);
-    msg = 'Suggested — Leaf: <strong>' + lp.desc + '</strong>, Spine: <strong>' + sp.desc + '</strong>';
+    spinePop.style.display = 'none';
   }
-  textEl.innerHTML = msg;
-  banner.style.display = 'flex';
+
+  const leafPop = document.getElementById('suggestion-leaf');
+  const leafText = document.getElementById('suggestion-leaf-text');
+  if (tierNum !== 1 && !leafMatch) {
+    const lp = getPlatformByRadix(leafRadix);
+    leafText.innerHTML = 'Suggested: <strong>' + lp.desc + '</strong>';
+    leafPop.style.display = 'flex';
+  } else {
+    leafPop.style.display = 'none';
+  }
+
+  positionSuggestions();
 }
 
-function applySuggestion() {
+function positionSuggestions() {
+  const leafPop = document.getElementById('suggestion-leaf');
+  const spinePop = document.getElementById('suggestion-spine');
+  if (leafPop.style.display !== 'none') {
+    const anchor = document.getElementById('leaf-radix');
+    const rect = anchor.getBoundingClientRect();
+    leafPop.style.left = (rect.right + 14) + 'px';
+    leafPop.style.top = (rect.top + rect.height / 2 - leafPop.offsetHeight / 2) + 'px';
+  }
+  if (spinePop.style.display !== 'none') {
+    const anchor = document.getElementById('spine-radix');
+    const rect = anchor.getBoundingClientRect();
+    spinePop.style.left = (rect.right + 14) + 'px';
+    spinePop.style.top = (rect.top + rect.height / 2 - spinePop.offsetHeight / 2) + 'px';
+  }
+}
+
+function applySuggestionFor(role) {
   if (!pendingSuggestion) return;
-  setPlatformSelection(pendingSuggestion.leafRadix, pendingSuggestion.spineRadix);
-  document.getElementById('platform-suggestion').style.display = 'none';
-  pendingSuggestion = null;
-  suggestionDismissed = false;
+  const select = document.getElementById(role + '-radix');
+  const custom = document.getElementById(role + '-radix-custom');
+  select.value = role === 'leaf' ? pendingSuggestion.leafRadix : pendingSuggestion.spineRadix;
+  custom.style.display = 'none';
+  document.getElementById('suggestion-' + role).style.display = 'none';
+  const otherRole = role === 'leaf' ? 'spine' : 'leaf';
+  if (document.getElementById('suggestion-' + otherRole).style.display === 'none') {
+    pendingSuggestion = null;
+  }
   clearResults();
 }
 
-function dismissSuggestion() {
-  document.getElementById('platform-suggestion').style.display = 'none';
-  suggestionDismissed = true;
+function dismissSuggestionFor(role) {
+  document.getElementById('suggestion-' + role).style.display = 'none';
+  const otherRole = role === 'leaf' ? 'spine' : 'leaf';
+  if (document.getElementById('suggestion-' + otherRole).style.display === 'none') {
+    suggestionDismissed = true;
+  }
 }
 
 function autoSelect1Tier(linksPerPlane, breakout) {
@@ -942,6 +1011,7 @@ function autoSelect1Tier(linksPerPlane, breakout) {
 }
 
 function autoSelect2Tier(linksPerPlane, breakout) {
+  let best = null;
   for (let pass = 0; pass < 2; pass++) {
     for (const lp of PLATFORMS) {
       const physDown = Math.floor(lp.radix / 2);
@@ -956,17 +1026,26 @@ function autoSelect2Tier(linksPerPlane, breakout) {
         if (pass === 0 && sp.radix < lp.radix) continue;
         const spinePerPlane = Math.ceil((leafPerPlane * uplinks) / sp.radix);
         if (spinePerPlane <= uplinks && uplinks % spinePerPlane === 0) {
-          showPlatformSuggestion(lp.radix, sp.radix);
-          return;
+          const ports = leafPerPlane * lp.radix + spinePerPlane * sp.radix;
+          const switches = leafPerPlane + spinePerPlane;
+          if (!best || ports < best.ports || (ports === best.ports && switches < best.switches)) {
+            best = { leaf: lp.radix, spine: sp.radix, ports, switches };
+          }
         }
       }
     }
+    if (best) break;
   }
 
-  showPlatformSuggestion(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
+  if (best) {
+    showPlatformSuggestion(best.leaf, best.spine);
+  } else {
+    showPlatformSuggestion(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
+  }
 }
 
 function autoSelect3Tier(linksPerPlane, breakout) {
+  let best = null;
   for (let pass = 0; pass < 2; pass++) {
     for (const lp of PLATFORMS) {
       const physDown = Math.floor(lp.radix / 2);
@@ -988,14 +1067,22 @@ function autoSelect3Tier(linksPerPlane, breakout) {
         if (pass === 0 && sp.radix < lp.radix) continue;
         const spinePerPlane = Math.ceil(spinePortsNeeded / sp.radix);
         if (spinePerPlane <= uplinks && uplinks % spinePerPlane === 0) {
-          showPlatformSuggestion(lp.radix, sp.radix);
-          return;
+          const ports = (leaf2PerPlane + leaf1PerPlane) * lp.radix + spinePerPlane * sp.radix;
+          const switches = leaf2PerPlane + leaf1PerPlane + spinePerPlane;
+          if (!best || ports < best.ports || (ports === best.ports && switches < best.switches)) {
+            best = { leaf: lp.radix, spine: sp.radix, ports, switches };
+          }
         }
       }
     }
+    if (best) break;
   }
 
-  showPlatformSuggestion(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
+  if (best) {
+    showPlatformSuggestion(best.leaf, best.spine);
+  } else {
+    showPlatformSuggestion(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
+  }
 }
 
 function updateTierHint() {
@@ -1009,7 +1096,6 @@ function updateTierHint() {
   const spineSpeedRow = document.getElementById('spine-speed-row');
   const balanceRow = document.getElementById('balance-row');
   const oversubField = document.getElementById('oversub-field');
-  const suggestionBanner = document.getElementById('platform-suggestion');
 
   if (t === '4') {
     leafRow.style.display = 'none';
@@ -1018,8 +1104,7 @@ function updateTierHint() {
     spineSpeedRow.style.display = 'none';
     balanceRow.style.display = 'none';
     oversubField.style.display = 'none';
-    suggestionBanner.style.display = 'none';
-    pendingSuggestion = null;
+    hideSuggestions();
   } else if (t === '1') {
     leafRow.style.display = 'none';
     spineRow.style.display = 'block';
@@ -1043,6 +1128,8 @@ window.addEventListener('DOMContentLoaded', () => {
   populateDropdowns();
   syncBreakout();
   updateTierHint();
+  document.querySelector('.sidebar-scroll').addEventListener('scroll', positionSuggestions);
+  window.addEventListener('resize', positionSuggestions);
 });
 
 function syncFromTotal() {
