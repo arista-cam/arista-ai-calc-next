@@ -404,16 +404,18 @@
   .tier-des { background: var(--teal50); color: var(--teal800); border: 1px solid rgba(108, 194, 74, 0.25); }
 
   .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
     gap: 10px;
     margin-bottom: 20px;
   }
   .metric-card {
+    flex: 1 1 0;
+    min-width: 0;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 14px;
+    padding: 14px 8px;
     box-shadow: var(--shadow-sm);
     text-align: center;
   }
@@ -462,6 +464,36 @@
     :root:not([data-theme="light"]) .warn-box { background: #451a03; border-color: #f59e0b; color: #fde68a; }
   }
   :root[data-theme="dark"] .warn-box { background: #451a03; border-color: #f59e0b; color: #fde68a; }
+
+  .mrc-box {
+    background: var(--info-bg); border-left: 4px solid var(--primary);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px;
+    font-size: 13px; color: var(--text); margin-top: 12px; margin-bottom: 16px; line-height: 1.6;
+  }
+  .mrc-box strong { color: var(--primary); }
+  .mrc-box .mrc-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .mrc-box .mrc-details { color: var(--text2); font-size: 12px; }
+  .mrc-box .mrc-details span { display: inline-block; margin-right: 16px; }
+  .mrc-box .mrc-benefits { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .mrc-box .mrc-benefit {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 3px 10px; font-size: 11px; color: var(--text2);
+  }
+
+  .mrc-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; margin-bottom: 16px; }
+  .mrc-compare-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 16px; font-size: 13px;
+  }
+  .mrc-compare-card.active { border-color: var(--primary); border-width: 2px; }
+  .mrc-compare-card h4 { margin: 0 0 10px; font-size: 14px; color: var(--text); }
+  .mrc-compare-card .stat-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .mrc-compare-card .stat-row:last-child { border-bottom: none; }
+  .mrc-compare-card .stat-label { color: var(--text2); font-size: 12px; }
+  .mrc-compare-card .stat-value { font-weight: 600; color: var(--text); font-size: 13px; }
+  .mrc-compare-card .stat-note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.4; }
+  .mrc-compare-card .exceeds-warning { color: var(--coral600); font-size: 11px; margin-top: 6px; font-weight: 500; }
+  @media (max-width: 640px) { .mrc-comparison { grid-template-columns: 1fr; } }
   .error-msg {
     background: var(--coral50); color: var(--coral800);
     font-size: 13px; font-weight: 500; padding: 12px 16px;
@@ -493,7 +525,8 @@
   }
   @media (max-width: 700px) {
     :root { --sidebar-w: 300px; }
-    .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
+    .metrics-grid { flex-wrap: wrap; }
+    .metrics-grid .metric-card { flex: 1 1 80px; }
   }
   @media (max-width: 520px) {
     body { height: auto; overflow: auto; }
@@ -512,7 +545,8 @@
       padding: 16px;
       overflow-y: visible;
     }
-    .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
+    .metrics-grid { flex-wrap: wrap; }
+    .metrics-grid .metric-card { flex: 1 1 80px; }
   }
 
   @media print {
@@ -804,8 +838,10 @@
         <select id="topo-type" class="topo-select" onchange="onTopoTypeChange()">
           <option value="fat-tree">Fat Tree</option>
           <option value="rail">Rail-Optimized</option>
+          <option value="mrc-planes">MRC Multi-Plane</option>
         </select>
       </span>
+      <button class="topo-btn" onclick="renderTopology()" title="Redraw">Redraw</button>
       <button class="topo-btn" onclick="fitTopology()" title="Fit to view">Fit</button>
       <button class="topo-btn" onclick="closeTopoModal()" title="Close">&#x2715;</button>
     </div>
@@ -1843,6 +1879,13 @@ function calculate() {
   out += '<div class="metrics-grid">';
   out += metric(fmtN(gpus),          'Total GPUs',     '');
   out += metric(fmtN(totalHostLinks),'Backend Links',   linksPerGpu + ' per GPU');
+  if (planes > 1) {
+    const bwPerPlane = hostSpeed * linksPerGpu / planes;
+    const bwTotal = hostSpeed * linksPerGpu;
+    const bwPlaneStr = Number.isInteger(bwPerPlane) ? bwPerPlane + 'G' : bwPerPlane.toFixed(1) + 'G';
+    out += metric(bwPlaneStr, 'BW / GPU / Plane', linksPerGpu + ' links ÷ ' + planes + ' planes');
+    out += metric(bwTotal + 'G', 'Aggregate BW / GPU', planes + ' planes × ' + bwPlaneStr);
+  }
   if (tierNum === 4) {
     out += metric(fmtN(totalLeaf),   'DES Leaves',      'across planes');
     out += metric(fmtN(totalSpine),  'DES Spines',      'across planes');
@@ -1858,6 +1901,78 @@ function calculate() {
     }
   }
   out += '</div>';
+
+  if (planes > 1) {
+    const perPlaneSpeed = hostSpeed;
+    out += '<div class="mrc-box">';
+    out += '<div class="mrc-title"><strong>MRC Multi-Plane Design</strong> — ' + planes + ' planes × ' + perPlaneSpeed + 'G per link</div>';
+    out += '<div class="mrc-details">';
+    out += '<span>Each plane is an independent two-tier fabric</span>';
+    out += '<span>NICs spray packets across all ' + planes + ' planes</span>';
+    out += '</div>';
+    out += '<div class="mrc-benefits">';
+    out += '<span class="mrc-benefit">Path diversity (' + planes + '× paths)</span>';
+    out += '<span class="mrc-benefit">Plane-level fault tolerance</span>';
+    out += '<span class="mrc-benefit">Two-tier simplicity per plane</span>';
+    out += '<span class="mrc-benefit">Smaller radix switches</span>';
+    out += '</div>';
+    out += '</div>';
+  }
+
+  if (tierNum === 2) {
+    const maxHostLinksPerPlane = spineRadix * effDownlinks;
+    const maxGpusPerPlane = Math.floor(maxHostLinksPerPlane / linksPerGpu);
+    const maxGpusTotal = maxGpusPerPlane * planes;
+    const utilPct = Math.round((gpus / maxGpusTotal) * 100);
+    out += '<div class="note-box" style="margin-bottom:16px">';
+    out += '<strong>Two-Tier Max Scale:</strong> ';
+    out += fmtN(maxGpusTotal) + ' GPUs';
+    if (planes > 1) out += ' (' + fmtN(maxGpusPerPlane) + ' per plane × ' + planes + ' planes)';
+    out += ' — using ' + utilPct + '% capacity';
+    if (gpus > maxGpusTotal) {
+      out += '<br><span style="color:var(--coral600);font-weight:500">⚠ Current cluster (' + fmtN(gpus) + ' GPUs) exceeds two-tier capacity. Consider three-tier or larger switches.</span>';
+    }
+    out += '<br><span style="color:var(--text3);font-size:11px">Formula: spine radix (' + spineRadix + ') × leaf downlinks (' + effDownlinks + ') ÷ links/GPU (' + linksPerGpu + ')' + (planes > 1 ? ' × planes (' + planes + ')' : '') + '</span>';
+    out += '</div>';
+
+    if (planes > 1) {
+      const spLinksAll = totalHostLinks;
+      const spLeafPP = Math.ceil(spLinksAll / effDownlinks);
+      const spSpineCount = Math.ceil((spLeafPP * uplinks) / spineRadix);
+      const spTotalSw = spLeafPP + spSpineCount;
+      const spMaxLinks = spineRadix * effDownlinks;
+      const spMaxGpus = Math.floor(spMaxLinks / linksPerGpu);
+      const spExceeds = gpus > spMaxGpus;
+
+      const mpLeafPP = Math.ceil(linksPerPlane / effDownlinks);
+      const mpSpinePP = Math.ceil((mpLeafPP * uplinks) / spineRadix);
+      const mpTotalSw = (mpLeafPP + mpSpinePP) * planes;
+
+      out += '<div class="mrc-comparison">';
+
+      out += '<div class="mrc-compare-card">';
+      out += '<h4>Single Plane Design</h4>';
+      out += '<div class="stat-row"><span class="stat-label">Leaf switches</span><span class="stat-value">' + fmtN(spLeafPP) + '</span></div>';
+      out += '<div class="stat-row"><span class="stat-label">Spine switches</span><span class="stat-value">' + fmtN(spSpineCount) + '</span></div>';
+      out += '<div class="stat-row"><span class="stat-label">Total switches</span><span class="stat-value">' + fmtN(spTotalSw) + '</span></div>';
+      out += '<div class="stat-row"><span class="stat-label">Max scale</span><span class="stat-value">' + fmtN(spMaxGpus) + ' GPUs</span></div>';
+      if (spExceeds) out += '<div class="exceeds-warning">⚠ Exceeds two-tier capacity — would require three-tier</div>';
+      else out += '<div class="stat-note">All traffic on a single fabric — no NIC spraying required, but single point of failure per path</div>';
+      out += '</div>';
+
+      out += '<div class="mrc-compare-card active">';
+      out += '<h4>MRC ' + planes + '-Plane Design ✓</h4>';
+      out += '<div class="stat-row"><span class="stat-label">Leaves / plane</span><span class="stat-value">' + fmtN(mpLeafPP) + '</span></div>';
+      out += '<div class="stat-row"><span class="stat-label">Spines / plane</span><span class="stat-value">' + fmtN(mpSpinePP) + '</span></div>';
+      out += '<div class="stat-row"><span class="stat-label">Total switches</span><span class="stat-value">' + fmtN(mpTotalSw) + ' (' + planes + '×' + fmtN(mpLeafPP + mpSpinePP) + ')</span></div>';
+      out += '<div class="stat-row"><span class="stat-label">Max scale</span><span class="stat-value">' + fmtN(maxGpusTotal) + ' GPUs</span></div>';
+      out += '<div class="stat-note">Packet spraying across ' + planes + ' independent fabrics — plane-level fault isolation, ' + planes + '× path diversity</div>';
+      out += '</div>';
+
+      out += '</div>';
+    }
+  }
+
   out += switchHtml + optHtml;
 
   el.innerHTML = out;
@@ -1880,22 +1995,31 @@ const RAIL_COLORS = [
   '#26a69a', '#ef5350', '#42a5f5', '#ffa726',
 ];
 
+function topoTitle() {
+  const c = lastTopoConfig;
+  if (currentTopoType === 'mrc-planes' && c.planes > 1) return 'MRC Multi-Plane Topology (' + c.planes + ' Planes)';
+  return 'Network Topology' + (c.planes > 1 ? ' (Plane 1 of ' + c.planes + ')' : '');
+}
+
 function openTopoModal() {
   if (!lastTopoConfig) return;
   const overlay = document.getElementById('topo-overlay');
-  const titleEl = document.getElementById('topo-title');
   const c = lastTopoConfig;
-  titleEl.textContent = 'Network Topology' + (c.planes > 1 ? ' (Plane 1 of ' + c.planes + ')' : '');
-  document.getElementById('topo-type-wrap').style.display = c.tier >= 2 ? '' : 'none';
+  const mrcOpt = document.querySelector('#topo-type option[value="mrc-planes"]');
+  if (mrcOpt) mrcOpt.style.display = c.planes > 1 ? '' : 'none';
+  if (currentTopoType === 'mrc-planes' && c.planes <= 1) currentTopoType = 'fat-tree';
+  document.getElementById('topo-type-wrap').style.display = (c.tier >= 2 || c.planes > 1) ? '' : 'none';
   document.getElementById('topo-type').value = currentTopoType;
+  document.getElementById('topo-title').textContent = topoTitle();
   overlay.classList.add('active');
   document.body.style.overflow = 'hidden';
-  setTimeout(() => renderTopology(), 50);
+  setTimeout(() => renderTopology(), 100);
   document.addEventListener('keydown', topoEscHandler);
 }
 
 function onTopoTypeChange() {
   currentTopoType = document.getElementById('topo-type').value;
+  document.getElementById('topo-title').textContent = topoTitle();
   renderTopology();
 }
 
@@ -1910,16 +2034,167 @@ function closeTopoModal() {
 
 function topoEscHandler(e) { if (e.key === 'Escape') closeTopoModal(); }
 
-function buildTopoData() {
+function buildMRCTopoData() {
   const c = lastTopoConfig;
   const nodes = [], edges = [];
-  const MAX_SHOW = 32;
+  const MAX_SHOW = 6;
+  const planeCount = c.planes;
+  const GAP_X = 120, GAP_Y = 160, PLANE_GAP = 140;
+
+  const hostCountPerLeaf = Math.ceil(c.hosts.perLeaf / c.hosts.linksPerNode);
+  const bottomTier = c.tiers[c.tiers.length - 1];
+
+  function displayedCount(count) { return count <= MAX_SHOW ? count : 5; }
+
+  let maxInPlane = 0;
+  for (const tier of c.tiers) {
+    const d = displayedCount(tier.perPlane);
+    if (d > maxInPlane) maxInPlane = d;
+  }
+  const planeWidth = (maxInPlane - 1) * GAP_X;
+
+  const planeOffsets = [];
+  for (let p = 0; p < planeCount; p++) {
+    planeOffsets.push(p * (planeWidth + PLANE_GAP));
+  }
+  const totalPlanesWidth = (planeCount - 1) * (planeWidth + PLANE_GAP) + planeWidth;
+
+  // Track which real indices exist per tier per plane for edge building
+  const realIndices = {};
+
+  for (let p = 0; p < planeCount; p++) {
+    const ox = planeOffsets[p];
+    for (let ti = 0; ti < c.tiers.length; ti++) {
+      const tier = c.tiers[ti];
+      const count = tier.perPlane;
+      const dCount = displayedCount(count);
+      const rowW = (dCount - 1) * GAP_X;
+      const sx = ox + (planeWidth - rowW) / 2;
+      const key = p + '-' + tier.id;
+      realIndices[key] = [];
+
+      if (count <= MAX_SHOW) {
+        for (let i = 0; i < count; i++) {
+          realIndices[key].push(i);
+          nodes.push({
+            id: 'p' + p + '-' + tier.id + '-' + i,
+            label: tier.label + ' ' + (i + 1),
+            tier: tier.id, platform: tier.label, radix: tier.radix,
+            rank: ti, plane: p,
+            pos: { x: sx + i * GAP_X, y: ti * GAP_Y }
+          });
+        }
+      } else {
+        for (let i = 0; i < 3; i++) {
+          realIndices[key].push(i);
+          nodes.push({
+            id: 'p' + p + '-' + tier.id + '-' + i,
+            label: tier.label + ' ' + (i + 1),
+            tier: tier.id, platform: tier.label, radix: tier.radix,
+            rank: ti, plane: p,
+            pos: { x: sx + i * GAP_X, y: ti * GAP_Y }
+          });
+        }
+        nodes.push({
+          id: 'p' + p + '-' + tier.id + '-ellipsis',
+          label: '…+' + (count - 4),
+          tier: 'ellipsis', rank: ti, plane: p,
+          pos: { x: sx + 3 * GAP_X, y: ti * GAP_Y }
+        });
+        realIndices[key].push(count - 1);
+        nodes.push({
+          id: 'p' + p + '-' + tier.id + '-' + (count - 1),
+          label: tier.label + ' ' + count,
+          tier: tier.id, platform: tier.label, radix: tier.radix,
+          rank: ti, plane: p,
+          pos: { x: sx + 4 * GAP_X, y: ti * GAP_Y }
+        });
+      }
+    }
+
+    // Intra-plane edges: only connect actually displayed nodes
+    for (const link of c.links) {
+      if (link.to === 'host') continue;
+      const fromKey = p + '-' + link.from;
+      const toKey = p + '-' + link.to;
+      const fromIdxs = realIndices[fromKey] || [];
+      const toIdxs = realIndices[toKey] || [];
+      const bStr = Number.isInteger(link.bundle) ? String(link.bundle) : link.bundle.toFixed(1);
+      for (const f of fromIdxs) {
+        for (const t of toIdxs) {
+          edges.push({
+            source: 'p' + p + '-' + link.from + '-' + f,
+            target: 'p' + p + '-' + link.to + '-' + t,
+            label: bStr + '×' + link.speed + 'G',
+            weight: Math.min(Math.max(1, link.bundle / 2), 3),
+            bundle: link.bundle, speed: link.speed, plane: p
+          });
+        }
+      }
+    }
+  }
+
+  // Host row spans all planes
+  const hostRank = c.tiers.length;
+  const totalHosts = bottomTier.perPlane * hostCountPerLeaf;
+  const dHosts = displayedCount(totalHosts);
+  const hostRowW = (dHosts - 1) * GAP_X;
+  const hostSx = (totalPlanesWidth - hostRowW) / 2;
+
+  if (totalHosts <= MAX_SHOW) {
+    for (let i = 0; i < totalHosts; i++) {
+      nodes.push({
+        id: 'host-' + i, label: 'Node ' + (i + 1), tier: 'host',
+        rank: hostRank, plane: -1,
+        pos: { x: hostSx + i * GAP_X, y: hostRank * GAP_Y }
+      });
+    }
+  } else {
+    nodes.push({ id: 'host-0', label: 'Node 1', tier: 'host', rank: hostRank, plane: -1, pos: { x: hostSx, y: hostRank * GAP_Y } });
+    nodes.push({ id: 'host-1', label: 'Node 2', tier: 'host', rank: hostRank, plane: -1, pos: { x: hostSx + GAP_X, y: hostRank * GAP_Y } });
+    nodes.push({ id: 'host-ellipsis', label: '…+' + (totalHosts - 4) + ' nodes', tier: 'ellipsis', rank: hostRank, plane: -1, pos: { x: hostSx + 2 * GAP_X, y: hostRank * GAP_Y } });
+    nodes.push({ id: 'host-' + (totalHosts - 2), label: 'Node ' + (totalHosts - 1), tier: 'host', rank: hostRank, plane: -1, pos: { x: hostSx + 3 * GAP_X, y: hostRank * GAP_Y } });
+    nodes.push({ id: 'host-' + (totalHosts - 1), label: 'Node ' + totalHosts, tier: 'host', rank: hostRank, plane: -1, pos: { x: hostSx + 4 * GAP_X, y: hostRank * GAP_Y } });
+  }
+
+  // Cross-plane host edges: each host connects to one leaf in each plane
+  const hostLink = c.links.find(l => l.to === 'host');
+  const hostNodes = nodes.filter(n => n.tier === 'host');
+  for (let hi = 0; hi < hostNodes.length; hi++) {
+    const hn = hostNodes[hi];
+    for (let p = 0; p < planeCount; p++) {
+      const leafKey = p + '-' + bottomTier.id;
+      const leafIdxs = realIndices[leafKey] || [];
+      const leafIdx = leafIdxs[hi % leafIdxs.length];
+      edges.push({
+        source: 'p' + p + '-' + bottomTier.id + '-' + leafIdx,
+        target: hn.id,
+        label: hostLink ? c.hosts.linksPerNode + '×' + hostLink.speed + 'G' : '',
+        weight: 1.5, bundle: c.hosts.linksPerNode,
+        speed: hostLink ? hostLink.speed : 400, plane: p
+      });
+    }
+  }
+
+  return { nodes, edges, isMRC: true, planeCount };
+}
+
+function buildTopoData() {
+  if (currentTopoType === 'mrc-planes' && lastTopoConfig.planes > 1) return buildMRCTopoData();
+
+  const c = lastTopoConfig;
+  const nodes = [], edges = [];
+  const MAX_SHOW = 12;
   const isRail = currentTopoType === 'rail' && c.tier >= 2;
+
+  const tierRealIdx = {};
 
   function addTierNodes(tier, rank) {
     const count = tier.perPlane;
+    tierRealIdx[tier.id] = [];
     if (count <= MAX_SHOW) {
       for (let i = 0; i < count; i++) {
+        tierRealIdx[tier.id].push(i);
         nodes.push({
           id: tier.id + '-' + i, label: tier.label + ' ' + (i + 1),
           tier: tier.id, platform: tier.label, radix: tier.radix, rank
@@ -1928,6 +2203,7 @@ function buildTopoData() {
       return count;
     }
     for (let i = 0; i < 3; i++) {
+      tierRealIdx[tier.id].push(i);
       nodes.push({
         id: tier.id + '-' + i, label: tier.label + ' ' + (i + 1),
         tier: tier.id, platform: tier.label, radix: tier.radix, rank
@@ -1937,6 +2213,7 @@ function buildTopoData() {
       id: tier.id + '-ellipsis', label: '…+' + (count - 4) + ' more',
       tier: 'ellipsis', rank
     });
+    tierRealIdx[tier.id].push(count - 1);
     nodes.push({
       id: tier.id + '-' + (count - 1), label: tier.label + ' ' + count,
       tier: tier.id, platform: tier.label, radix: tier.radix, rank
@@ -1999,10 +2276,10 @@ function buildTopoData() {
   for (const link of c.links) {
     if (link.to === 'host') {
       if (isRail) {
-        const leafShow = Math.min(tierCounts[link.from], MAX_SHOW);
+        const leafIdxs = tierRealIdx[link.from] || [];
         const hostNodes = nodes.filter(n => n.tier === 'host');
         for (const hn of hostNodes) {
-          for (let t = 0; t < leafShow; t++) {
+          for (const t of leafIdxs) {
             edges.push({
               source: link.from + '-' + t, target: hn.id,
               label: '1×' + link.speed + 'G',
@@ -2011,18 +2288,13 @@ function buildTopoData() {
           }
         }
       } else {
-        const bCount = Math.min(tierCounts[link.from], MAX_SHOW);
-        for (let i = 0; i < bCount; i++) {
+        const leafIdxs = tierRealIdx[link.from] || [];
+        const hostNodes = nodes.filter(n => n.tier === 'host' || (n.tier === 'ellipsis' && n.id.startsWith('host')));
+        const realHosts = nodes.filter(n => n.tier === 'host');
+        for (let hi = 0; hi < realHosts.length; hi++) {
+          const leafIdx = leafIdxs[hi % leafIdxs.length];
           edges.push({
-            source: link.from + '-' + i, target: 'host-' + i,
-            label: c.hosts.linksPerNode + '×' + link.speed + 'G',
-            weight: Math.min(Math.max(1, c.hosts.linksPerNode / 2), 4),
-            bundle: c.hosts.linksPerNode, speed: link.speed
-          });
-        }
-        if (tierCounts[link.from] > MAX_SHOW) {
-          edges.push({
-            source: link.from + '-' + (tierCounts[link.from] - 1), target: 'host-last',
+            source: link.from + '-' + leafIdx, target: realHosts[hi].id,
             label: c.hosts.linksPerNode + '×' + link.speed + 'G',
             weight: Math.min(Math.max(1, c.hosts.linksPerNode / 2), 4),
             bundle: c.hosts.linksPerNode, speed: link.speed
@@ -2032,16 +2304,14 @@ function buildTopoData() {
       continue;
     }
 
-    // Inter-tier edges: ALWAYS full mesh (both fat tree and rail-optimized)
-    const fromCount = tierCounts[link.from];
-    const toCount = tierCounts[link.to];
-    const fromShow = Math.min(fromCount, MAX_SHOW);
-    const toShow = Math.min(toCount, MAX_SHOW);
+    // Inter-tier edges: only connect actually displayed nodes
+    const fromIdxs = tierRealIdx[link.from] || [];
+    const toIdxs = tierRealIdx[link.to] || [];
     const bStr = Number.isInteger(link.bundle) ? String(link.bundle) : link.bundle.toFixed(1);
 
-    if (fromShow * toShow <= 200) {
-      for (let f = 0; f < fromShow; f++) {
-        for (let t = 0; t < toShow; t++) {
+    if (fromIdxs.length * toIdxs.length <= 200) {
+      for (const f of fromIdxs) {
+        for (const t of toIdxs) {
           edges.push({
             source: link.from + '-' + f, target: link.to + '-' + t,
             label: bStr + '×' + link.speed + 'G',
@@ -2051,22 +2321,13 @@ function buildTopoData() {
         }
       }
     } else {
-      for (let t = 0; t < toShow; t++) {
+      for (const t of toIdxs) {
         edges.push({
-          source: link.from + '-0', target: link.to + '-' + t,
-          label: fromShow + '×' + bStr + '×' + link.speed + 'G',
+          source: link.from + '-' + fromIdxs[0], target: link.to + '-' + t,
+          label: fromIdxs.length + '×' + bStr + '×' + link.speed + 'G',
           weight: 3, bundle: link.bundle, speed: link.speed
         });
       }
-    }
-
-    if (fromCount > MAX_SHOW && toCount > MAX_SHOW) {
-      edges.push({
-        source: link.from + '-' + (fromCount - 1), target: link.to + '-' + (toCount - 1),
-        label: bStr + '×' + link.speed + 'G',
-        weight: Math.min(Math.max(1, link.bundle / 2), 4),
-        bundle: link.bundle, speed: link.speed
-      });
     }
   }
 
@@ -2085,11 +2346,13 @@ function renderTopology() {
   const v = n => s.getPropertyValue(n).trim();
   const c = lastTopoConfig;
   const isRail = currentTopoType === 'rail' && c.tier >= 2;
+  const isMRC = !!data.isMRC;
   const isDark = parseInt(v('--bg').replace('#', '').slice(0, 2), 16) < 80;
 
-  // Build tier lookup for edge coloring
+  // Build tier and plane lookup
   const tierById = {};
-  data.nodes.forEach(n => { tierById[n.id] = n.tier; });
+  const planeById = {};
+  data.nodes.forEach(n => { tierById[n.id] = n.tier; planeById[n.id] = n.plane; });
 
   function hexToRgb(hex) {
     const n = parseInt(hex.replace('#', ''), 16);
@@ -2114,6 +2377,7 @@ function renderTopology() {
   }
 
   function nodeColor(d) {
+    if (isMRC && d.plane >= 0) return RAIL_COLORS[d.plane % RAIL_COLORS.length];
     if (d.tier === 'leaf' || d.tier === 'edgeLeaf') return colorForLeaf(d.id);
     if (d.tier === 'spine') return v('--primary');
     if (d.tier === 'aggLeaf') return v('--primary-hover');
@@ -2145,6 +2409,7 @@ function renderTopology() {
   }
 
   function edgeStroke(d) {
+    if (isMRC && d.plane >= 0) return RAIL_COLORS[d.plane % RAIL_COLORS.length];
     const src = d.source, tgt = d.target;
     if (tierById[src] === 'leaf' || tierById[src] === 'edgeLeaf') return colorForLeaf(src);
     if (tierById[tgt] === 'leaf' || tierById[tgt] === 'edgeLeaf') return colorForLeaf(tgt);
@@ -2183,14 +2448,19 @@ function renderTopology() {
       .attr('gradientUnits', 'userSpaceOnUse')
       .attr('x1', srcPos.x).attr('y1', srcPos.y)
       .attr('x2', tgtPos.x).attr('y2', tgtPos.y);
-    const sColor = (tierById[e.source] === 'spine') ? v('--primary') :
-                   (tierById[e.source] === 'aggLeaf') ? v('--primary-hover') :
-                   (tierById[e.source] === 'leaf' || tierById[e.source] === 'edgeLeaf') ? colorForLeaf(e.source) :
-                   leafColor;
-    const tColor = (tierById[e.target] === 'spine') ? v('--primary') :
-                   (tierById[e.target] === 'aggLeaf') ? v('--primary-hover') :
-                   (tierById[e.target] === 'leaf' || tierById[e.target] === 'edgeLeaf') ? colorForLeaf(e.target) :
-                   leafColor;
+    let sColor, tColor;
+    if (isMRC && e.plane >= 0) {
+      sColor = tColor = RAIL_COLORS[e.plane % RAIL_COLORS.length];
+    } else {
+      sColor = (tierById[e.source] === 'spine') ? v('--primary') :
+               (tierById[e.source] === 'aggLeaf') ? v('--primary-hover') :
+               (tierById[e.source] === 'leaf' || tierById[e.source] === 'edgeLeaf') ? colorForLeaf(e.source) :
+               leafColor;
+      tColor = (tierById[e.target] === 'spine') ? v('--primary') :
+               (tierById[e.target] === 'aggLeaf') ? v('--primary-hover') :
+               (tierById[e.target] === 'leaf' || tierById[e.target] === 'edgeLeaf') ? colorForLeaf(e.target) :
+               leafColor;
+    }
     grad.append('stop').attr('offset', '0%').attr('stop-color', sColor).attr('stop-opacity', 0.6);
     grad.append('stop').attr('offset', '100%').attr('stop-color', tColor).attr('stop-opacity', 0.6);
   });
@@ -2204,6 +2474,41 @@ function renderTopology() {
   svg.on('dblclick.zoom', null);
   d3Svg = svg;
   d3Zoom = zoom;
+
+  // MRC plane backgrounds
+  if (isMRC && data.planeCount > 1) {
+    const planeGroup = g.append('g').attr('class', 'topo-plane-bgs');
+    const planeNodes = {};
+    data.nodes.forEach(n => {
+      if (n.plane >= 0) {
+        if (!planeNodes[n.plane]) planeNodes[n.plane] = [];
+        planeNodes[n.plane].push(n);
+      }
+    });
+    for (let p = 0; p < data.planeCount; p++) {
+      const pn = planeNodes[p] || [];
+      if (!pn.length) continue;
+      const xs = pn.map(n => n.pos.x), ys = pn.map(n => n.pos.y);
+      const pad = 50;
+      const x1 = Math.min(...xs) - pad, y1 = Math.min(...ys) - pad;
+      const x2 = Math.max(...xs) + pad, y2 = Math.max(...ys) + pad;
+      const planeColor = RAIL_COLORS[p % RAIL_COLORS.length];
+      planeGroup.append('rect')
+        .attr('x', x1).attr('y', y1)
+        .attr('width', x2 - x1).attr('height', y2 - y1)
+        .attr('rx', 12)
+        .attr('fill', planeColor).attr('fill-opacity', isDark ? 0.08 : 0.06)
+        .attr('stroke', planeColor).attr('stroke-opacity', isDark ? 0.25 : 0.2)
+        .attr('stroke-width', 1.5);
+      planeGroup.append('text')
+        .attr('x', (x1 + x2) / 2).attr('y', y1 - 8)
+        .attr('text-anchor', 'middle')
+        .attr('fill', planeColor).attr('fill-opacity', 0.8)
+        .attr('font-size', 12).attr('font-weight', 700)
+        .attr('letter-spacing', '0.5px')
+        .text('PLANE ' + (p + 1));
+    }
+  }
 
   // Draw edges with gradient stroke and draw-in animation
   const edgeGroup = g.append('g').attr('class', 'topo-edges');
@@ -2256,6 +2561,8 @@ function renderTopology() {
       toRank = c.tiers.length;
       if (isRail) {
         labelText = '1×' + link.speed + 'G/rail';
+      } else if (isMRC) {
+        labelText = c.hosts.linksPerNode + '×' + link.speed + 'G/plane';
       } else {
         labelText = c.hosts.linksPerNode + '×' + link.speed + 'G/node';
       }
@@ -2387,7 +2694,8 @@ function renderTopology() {
     if (event.target === this || event.target === g.node()) unhighlight();
   });
 
-  setTimeout(() => fitTopology(), 50);
+  setTimeout(() => fitTopology(), 100);
+  setTimeout(() => fitTopology(), 800);
 }
 
 function fitTopology() {
