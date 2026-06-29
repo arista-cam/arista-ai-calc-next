@@ -5,115 +5,136 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Backend Network Calculator</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  
+
   :root {
-    /* Modern Slate & Indigo Light Theme */
-    --bg: #ffffff; 
-    --bg2: #f8fafc; 
-    --bg3: #f1f5f9;
-    --text: #0f172a; 
-    --text2: #475569; 
-    --text3: #64748b;
-    --border: #e2e8f0; 
-    --border2: #cbd5e1;
-    
-    --primary: #6366f1;
-    --primary-hover: #4f46e5;
-    --primary-light: #e0e7ff;
-    --primary-text: #3730a3;
+    --bg: #ffffff;
+    --bg2: #f8f9fb;
+    --bg3: #f0f2f5;
+    --panel-bg: #ffffff;
+    --text: #111827;
+    --text2: #4b5563;
+    --text3: #9ca3af;
+    --border: #e5e7eb;
+    --border2: #d1d5db;
+
+    --primary: #0d9488;
+    --primary-hover: #0f766e;
+    --primary-light: #ccfbf1;
+    --primary-text: #134e4a;
+    --primary-glow: rgba(13, 148, 136, 0.15);
 
     --teal50: #ecfdf5; --teal600: #059669; --teal800: #065f46;
     --coral50: #fef2f2; --coral600: #dc2626; --coral800: #991b1b;
-    --info-bg: #eff6ff; --info-text: #1e3a8a; --info-border: #3b82f6;
-    
-    --radius: 10px; 
-    --radius-lg: 16px;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --info-bg: #f0f9ff; --info-text: #0c4a6e; --info-border: #0ea5e9;
+
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+    --sidebar-w: 360px;
+    --topbar-h: 56px;
   }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      /* Deep Slate Dark Theme */
-      --bg: #1e293b;
-      --bg2: #0f172a;
-      --bg3: #020617;
-      --text: #f8fafc;
-      --text2: #cbd5e1;
-      --text3: #94a3b8;
-      --border: #334155;
-      --border2: #475569;
+      --bg: #111827;
+      --bg2: #1f2937;
+      --bg3: #0f172a;
+      --panel-bg: #1f2937;
+      --text: #f9fafb;
+      --text2: #d1d5db;
+      --text3: #6b7280;
+      --border: #374151;
+      --border2: #4b5563;
 
-      --primary: #818cf8;
-      --primary-hover: #6366f1;
-      --primary-light: #312e81;
-      --primary-text: #c7d2fe;
+      --primary: #2dd4bf;
+      --primary-hover: #14b8a6;
+      --primary-light: #042f2e;
+      --primary-text: #99f6e4;
+      --primary-glow: rgba(45, 212, 191, 0.12);
 
       --teal50: #064e3b; --teal800: #34d399;
-      --coral50: #7f1d1d; --coral800: #fca5a5;
-      --info-bg: #1e3a8a; --info-text: #bfdbfe; --info-border: #3b82f6;
+      --coral50: #450a0a; --coral800: #fca5a5;
+      --info-bg: #0c4a6e; --info-text: #bae6fd; --info-border: #0ea5e9;
 
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
-      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-      --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4);
     }
   }
 
   :root[data-theme="dark"] {
-    --bg: #1e293b;
-    --bg2: #0f172a;
-    --bg3: #020617;
-    --text: #f8fafc;
-    --text2: #cbd5e1;
-    --text3: #94a3b8;
-    --border: #334155;
-    --border2: #475569;
+    --bg: #111827;
+    --bg2: #1f2937;
+    --bg3: #0f172a;
+    --panel-bg: #1f2937;
+    --text: #f9fafb;
+    --text2: #d1d5db;
+    --text3: #6b7280;
+    --border: #374151;
+    --border2: #4b5563;
 
-    --primary: #818cf8;
-    --primary-hover: #6366f1;
-    --primary-light: #312e81;
-    --primary-text: #c7d2fe;
+    --primary: #2dd4bf;
+    --primary-hover: #14b8a6;
+    --primary-light: #042f2e;
+    --primary-text: #99f6e4;
+    --primary-glow: rgba(45, 212, 191, 0.12);
 
     --teal50: #064e3b; --teal800: #34d399;
-    --coral50: #7f1d1d; --coral800: #fca5a5;
-    --info-bg: #1e3a8a; --info-text: #bfdbfe; --info-border: #3b82f6;
+    --coral50: #450a0a; --coral800: #fca5a5;
+    --info-bg: #0c4a6e; --info-text: #bae6fd; --info-border: #0ea5e9;
 
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-    --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4);
   }
 
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--bg3);
     color: var(--text);
-    min-height: 100vh;
-    padding: 3rem 1.5rem;
+    margin: 0;
     line-height: 1.5;
+    overflow: hidden;
+    height: 100vh;
   }
 
-  .container { max-width: 760px; margin: 0 auto; }
-  .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  h1 { font-size: 28px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.02em; }
+  /* ── Top bar ── */
+  .topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--topbar-h);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+    box-shadow: var(--shadow-sm);
+    z-index: 200;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-logo {
+    width: 32px; height: 32px; border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 15px;
+  }
+  .topbar h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
 
   .theme-toggle {
-    flex-shrink: 0;
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    border-radius: var(--radius);
-    padding: 8px;
-    cursor: pointer;
-    color: var(--text2);
-    transition: all 0.2s ease;
-    box-shadow: var(--shadow-sm);
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 6px;
+    cursor: pointer; color: var(--text3);
+    transition: all 0.15s ease;
     display: flex; align-items: center; justify-content: center;
   }
   .theme-toggle:hover { border-color: var(--primary); color: var(--primary); }
-  .theme-toggle svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .theme-toggle svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .theme-toggle .icon-moon { display: none; }
   :root[data-theme="dark"] .theme-toggle .icon-sun { display: none; }
   :root[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
@@ -121,181 +142,326 @@
     :root:not([data-theme="light"]) .theme-toggle .icon-sun { display: none; }
     :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: block; }
   }
-  .subtitle { font-size: 15px; color: var(--text2); margin-bottom: 2.5rem; }
-  
-  .card { 
-    background: var(--bg); 
-    border: 1px solid var(--border); 
-    border-radius: var(--radius-lg); 
-    padding: 1.5rem 1.75rem; 
-    margin-bottom: 1.25rem;
-    box-shadow: var(--shadow);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-  .card:hover { box-shadow: var(--shadow-hover); }
 
-  .section-label { 
-    font-size: 12px; 
-    color: var(--primary); 
-    text-transform: uppercase; 
-    letter-spacing: 0.1em; 
-    font-weight: 600; 
-    margin-bottom: 16px; 
+  /* ── Layout shell ── */
+  .layout {
+    display: contents;
   }
-  
-  .input-row { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
-  .input-row label { font-size: 14px; font-weight: 500; color: var(--text2); min-width: 180px; }
-  .input-row input, .input-row select {
-    font-family: inherit;
-    font-size: 14px;
-    padding: 9px 12px;
-    border-radius: var(--radius);
-    width: 220px;
-    border: 1px solid var(--border2); 
-    background: var(--bg2); 
-    color: var(--text);
-    outline: none; 
-    transition: all 0.2s ease;
-    box-shadow: inset var(--shadow-sm);
+
+  /* ── Sidebar (inputs) ── */
+  .sidebar {
+    position: fixed;
+    top: var(--topbar-h);
+    left: 0;
+    bottom: 0;
+    width: var(--sidebar-w);
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
   }
-  .input-row input:focus, .input-row select:focus { 
-    border-color: var(--primary); 
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); 
+  .sidebar-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sidebar-footer {
+    flex-shrink: 0;
+    padding: 8px;
+    border-top: 1px solid var(--border);
     background: var(--bg);
   }
-  .input-row .hint { font-size: 13px; color: var(--text3); }
-  
-  .or-divider { 
-    display: flex; align-items: center; gap: 12px; margin: 18px 0; 
-    color: var(--text3); font-size: 12px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;
+
+  /* ── Input sections ── */
+  .input-section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg);
+    overflow: hidden;
+  }
+  .input-section-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .input-section-header:hover { background: var(--bg2); }
+  .input-section-header .section-icon {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: var(--primary-light);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .input-section-header .section-icon svg {
+    width: 14px; height: 14px; stroke: var(--primary); fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .input-section-header .section-title {
+    font-size: 13px; font-weight: 600; color: var(--text);
+    flex: 1;
+  }
+  .input-section-header .chevron {
+    width: 16px; height: 16px; color: var(--text3);
+    transition: transform 0.2s ease;
+  }
+  .input-section.collapsed .chevron { transform: rotate(-90deg); }
+  .input-section-body { padding: 2px 10px 10px; }
+  .input-section.collapsed .input-section-body { display: none; }
+
+  /* ── Form elements ── */
+  .field { margin-bottom: 8px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block;
+    font-size: 12px; font-weight: 500; color: var(--text2);
+    margin-bottom: 3px;
+  }
+  .field input, .field select {
+    font-family: inherit; font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-glow);
+  }
+  .field .hint { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .field select:disabled { opacity: 0.5; cursor: not-allowed; background: var(--bg3); }
+  .field-row { display: flex; gap: 8px; }
+  .field-row .field { flex: 1; min-width: 0; }
+
+  .or-divider {
+    display: flex; align-items: center; gap: 10px; margin: 4px 0;
+    color: var(--text3); font-size: 11px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.08em;
   }
   .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-  /* Tier selector */
-  .tier-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 8px; }
-  .tier-opt { position: relative; cursor: pointer; }
+  /* ── Tier selector ── */
+  .tier-selector { display: flex; gap: 6px; margin-bottom: 4px; }
+  .tier-opt { flex: 1; position: relative; cursor: pointer; }
   .tier-opt input[type=radio] { position: absolute; opacity: 0; width: 0; height: 0; }
   .tier-opt-inner {
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    padding: 16px 12px; border-radius: var(--radius-lg);
-    border: 2px solid var(--border); background: var(--bg2);
-    transition: all 0.2s ease;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 7px 6px; border-radius: var(--radius);
+    border: 1.5px solid var(--border); background: var(--bg2);
+    transition: all 0.15s ease;
     text-align: center; user-select: none;
   }
-  .tier-opt input:checked + .tier-opt-inner { 
-    border-color: var(--primary); 
-    background: var(--primary-light); 
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+  .tier-opt input:checked + .tier-opt-inner {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    box-shadow: 0 0 0 1px var(--primary-glow);
   }
   .tier-opt-inner:hover { border-color: var(--primary); }
-  .tier-opt-icon { font-size: 24px; line-height: 1; color: var(--text3); transition: color 0.2s ease; }
-  .tier-opt-name { font-size: 14px; font-weight: 600; color: var(--text); }
-  .tier-opt-range { font-size: 12px; color: var(--text3); margin-top: 2px; }
-  
+  .tier-opt-icon { font-size: 16px; line-height: 1; color: var(--text3); }
+  .tier-opt-name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .tier-opt-range { font-size: 10px; color: var(--text3); }
   .tier-opt input:checked + .tier-opt-inner .tier-opt-name,
   .tier-opt input:checked + .tier-opt-inner .tier-opt-icon { color: var(--primary-text); }
   .tier-opt input:checked + .tier-opt-inner .tier-opt-range { color: var(--primary); }
-  
-  .tier-hint { font-size: 13px; color: var(--text3); margin-top: 12px; min-height: 18px; font-style: italic; }
+  .tier-hint { font-size: 11px; color: var(--text3); min-height: 14px; font-style: italic; line-height: 1.4; }
 
+  /* ── Platform suggestion banner ── */
+  .platform-suggestion {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--info-bg); border-left: 3px solid var(--info-border);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 8px 10px; font-size: 11px; color: var(--info-text);
+    line-height: 1.4; margin-top: 4px;
+  }
+  .platform-suggestion span { flex: 1; }
+  .suggestion-apply {
+    background: var(--primary); color: #fff; border: none;
+    border-radius: 4px; padding: 3px 10px; font-size: 11px;
+    font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .suggestion-apply:hover { background: var(--primary-hover); }
+  .suggestion-dismiss {
+    background: none; border: none; color: var(--info-text);
+    cursor: pointer; font-size: 16px; padding: 0 2px; line-height: 1; opacity: 0.6;
+  }
+  .suggestion-dismiss:hover { opacity: 1; }
+
+  /* ── Calculate button ── */
   .calc-btn {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; padding: 14px 24px; font-size: 16px; font-weight: 600; cursor: pointer;
-    border-radius: var(--radius-lg); border: none;
-    background: linear-gradient(135deg, var(--primary), var(--primary-hover)); 
-    color: white; 
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-    margin-top: 16px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+    border-radius: var(--radius); border: none;
+    background: var(--primary);
+    color: white;
+    transition: all 0.15s ease;
     font-family: inherit;
+    box-shadow: 0 1px 3px rgba(13, 148, 136, 0.3);
   }
-  .calc-btn:hover { 
-    transform: translateY(-2px); 
-    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4); 
+  .calc-btn:hover {
+    background: var(--primary-hover);
+    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.4);
   }
-  .calc-btn:active { transform: translateY(0) scale(0.98); }
-  .calc-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-  
-  #results { margin-top: 2rem; }
-  .tier-badge { 
-    display: inline-flex; align-items: center; gap: 6px; 
-    padding: 6px 16px; border-radius: 20px; 
-    font-size: 13px; font-weight: 600; margin-bottom: 20px; 
-    box-shadow: var(--shadow-sm);
+  .calc-btn:active { transform: scale(0.98); }
+  .calc-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ── Main content (results + diagram) ── */
+  .main-content {
+    position: fixed;
+    top: var(--topbar-h);
+    left: var(--sidebar-w);
+    right: 0;
+    bottom: 0;
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  .results-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .results-col {
+    flex: 1;
+    min-width: 0;
+  }
+  .diagram-col {
+    width: 340px;
+    flex-shrink: 0;
+  }
+  .diagram-col:empty { display: none; }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%;
+    min-height: 400px;
+    text-align: center;
+    color: var(--text3);
+  }
+  .empty-state-icon {
+    width: 64px; height: 64px;
+    border-radius: 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+  }
+  .empty-state-icon svg {
+    width: 28px; height: 28px; stroke: var(--text3); fill: none;
+    stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .empty-state h2 { font-size: 16px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+  .empty-state p { font-size: 13px; max-width: 280px; }
+
+  /* ── Results styling ── */
+
+  .tier-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; margin-bottom: 16px;
   }
   .tier-1 { background: var(--teal50); color: var(--teal800); border: 1px solid rgba(5, 150, 105, 0.2); }
-  .tier-2 { background: var(--primary-light); color: var(--primary-text); border: 1px solid rgba(99, 102, 241, 0.2); }
-  .tier-3 { background: var(--coral50); color: var(--coral800); border: 1px solid rgba(220, 38, 38, 0.2); }
-  
-  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; margin-bottom: 24px; }
-  .metric-card { 
-    background: var(--bg); border: 1px solid var(--border); 
-    border-radius: var(--radius-lg); padding: 16px; 
+  .tier-2 { background: var(--primary-light); color: var(--primary-text); border: 1px solid var(--primary-glow); }
+  .tier-3 { background: var(--coral50); color: var(--coral800); border: 1px solid rgba(220, 38, 38, 0.15); }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .metric-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px;
     box-shadow: var(--shadow-sm);
     text-align: center;
   }
-  .metric-label { font-size: 12px; color: var(--text3); font-weight: 500; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
-  .metric-val { font-size: 28px; font-weight: 600; color: var(--text); }
-  .metric-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
-  
-  .result-section { 
-    border: 1px solid var(--border); border-radius: var(--radius-lg); 
-    padding: 20px; margin-bottom: 16px; background: var(--bg); 
+  .metric-label {
+    font-size: 10px; color: var(--text3); font-weight: 600;
+    margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .metric-val { font-size: 24px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .metric-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .result-section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    background: var(--bg);
     box-shadow: var(--shadow-sm);
   }
-  .result-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; color: var(--text); }
-  .result-section h3 svg { width: 20px; height: 20px; stroke: var(--primary); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  
-  .breakdown-table { width: 100%; font-size: 14px; border-collapse: collapse; }
-  .breakdown-table td { padding: 10px 0; color: var(--text2); vertical-align: middle; }
+  .result-section h3 {
+    font-size: 14px; font-weight: 600; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px; color: var(--text);
+  }
+  .result-section h3 svg {
+    width: 16px; height: 16px; stroke: var(--primary); fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  .breakdown-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+  .breakdown-table td { padding: 8px 0; color: var(--text2); vertical-align: middle; }
   .breakdown-table td:last-child { text-align: right; font-weight: 600; color: var(--text); }
   .breakdown-table tr + tr td { border-top: 1px solid var(--border); }
-  .breakdown-table .subtotal td { border-top: 2px solid var(--border2); font-weight: 600; color: var(--text); padding-top: 12px; }
-  .breakdown-table .subtotal td:last-child { color: var(--primary); font-size: 15px; }
-  
-  .note-box { 
-    background: var(--info-bg); border-left: 4px solid var(--info-border); 
-    border-radius: 0 var(--radius) var(--radius) 0; padding: 12px 16px; 
-    font-size: 13px; color: var(--info-text); margin-top: 16px; line-height: 1.5;
+  .breakdown-table .subtotal td { border-top: 2px solid var(--border2); font-weight: 600; color: var(--text); padding-top: 10px; }
+  .breakdown-table .subtotal td:last-child { color: var(--primary); font-size: 14px; }
+
+  .note-box {
+    background: var(--info-bg); border-left: 3px solid var(--info-border);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 10px 14px;
+    font-size: 12px; color: var(--info-text); margin-top: 12px; line-height: 1.5;
   }
-  .warn-box { 
-    background: #fffbeb; border-left: 4px solid #f59e0b; 
-    border-radius: 0 var(--radius) var(--radius) 0; padding: 12px 16px; 
-    font-size: 13px; color: #92400e; margin-top: 12px; margin-bottom: 20px;
+  .warn-box {
+    background: #fffbeb; border-left: 3px solid #f59e0b;
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 10px 14px;
+    font-size: 12px; color: #92400e; margin-top: 8px; margin-bottom: 16px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .warn-box { background: #451a03; border-color: #f59e0b; color: #fde68a; }
   }
   :root[data-theme="dark"] .warn-box { background: #451a03; border-color: #f59e0b; color: #fde68a; }
-  .error-msg { 
-    background: var(--coral50); color: var(--coral800); 
-    font-size: 14px; font-weight: 500; padding: 12px 16px; 
-    border-radius: var(--radius); border-left: 4px solid var(--coral600);
+  .error-msg {
+    background: var(--coral50); color: var(--coral800);
+    font-size: 13px; font-weight: 500; padding: 12px 16px;
+    border-radius: var(--radius); border-left: 3px solid var(--coral600);
   }
 
-  /* Architectural Diagram CSS */
-  .diagram-wrapper { 
-    margin-top: 20px; margin-bottom: 16px; padding: 24px; background: var(--bg2); 
-    border-radius: var(--radius-lg); border: 1px solid var(--border); 
-    display: flex; flex-direction: column; align-items: center; gap: 0px; 
+  /* ── Diagram ── */
+  .diagram-wrapper {
+    padding: 16px; background: var(--bg2);
+    border-radius: var(--radius-lg); border: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center;
   }
-  .diag-title { 
-    width: 100%; font-size: 15px; font-weight: 600; color: var(--text); 
-    display: flex; align-items: center; gap: 8px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em;
+  .diag-title {
+    width: 100%; font-size: 11px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+    text-transform: uppercase; letter-spacing: 0.05em;
   }
-  .diag-title svg { width: 20px; height: 20px; stroke: var(--primary); fill: none; stroke-width: 2; }
-  .diagram-wrapper > svg { width: 100%; max-width: 520px; height: auto; margin: 0 auto; display: block; }
+  .diag-title svg { width: 14px; height: 14px; stroke: var(--primary); fill: none; stroke-width: 2; }
+  .diagram-wrapper > svg { width: 100%; height: auto; margin: 0 auto; display: block; }
   .diagram-wrapper svg text { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
+  /* ── AROC button & modal ── */
   .aroc-btn {
     display: flex; align-items: center; justify-content: center; gap: 8px;
-    margin: 24px auto 0; padding: 12px 28px; font-size: 14px; font-weight: 600;
-    border-radius: var(--radius); border: 2px solid var(--primary);
+    margin: 20px auto 0; padding: 10px 24px; font-size: 13px; font-weight: 600;
+    border-radius: var(--radius); border: 1.5px solid var(--primary);
     background: transparent; color: var(--primary); cursor: pointer;
-    font-family: inherit; transition: all 0.2s ease;
+    font-family: inherit; transition: all 0.15s ease;
   }
   .aroc-btn:hover { background: var(--primary); color: white; }
-  .aroc-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .aroc-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
   .aroc-overlay {
     display: none; position: fixed; inset: 0; z-index: 1000;
@@ -307,245 +473,340 @@
     background: var(--bg); border-radius: var(--radius-lg);
     box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
     width: 90vw; max-width: 720px; max-height: 85vh; overflow-y: auto;
-    padding: 28px 32px;
+    padding: 24px 28px;
   }
-  .aroc-panel h2 { font-size: 20px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .aroc-panel h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
   .aroc-close {
     margin-left: auto; background: none; border: none; cursor: pointer;
-    font-size: 22px; color: var(--text3); padding: 4px 8px; border-radius: var(--radius);
+    font-size: 20px; color: var(--text3); padding: 4px 8px; border-radius: var(--radius);
   }
   .aroc-close:hover { background: var(--bg3); color: var(--text); }
 
-  .aroc-auth { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .aroc-auth { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
   .aroc-auth input {
-    flex: 1; min-width: 200px; font-family: inherit; font-size: 13px;
-    padding: 9px 12px; border-radius: var(--radius);
-    border: 1px solid var(--border2); background: var(--bg2); color: var(--text);
+    flex: 1; min-width: 180px; font-family: inherit; font-size: 12px;
+    padding: 8px 10px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg2); color: var(--text);
   }
   .aroc-auth-btn {
-    padding: 9px 18px; font-size: 13px; font-weight: 600; border-radius: var(--radius);
+    padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px;
     border: none; background: var(--primary); color: white; cursor: pointer; font-family: inherit;
   }
   .aroc-auth-btn:hover { background: var(--primary-hover); }
   .aroc-auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .aroc-auth-link { font-size: 12px; color: var(--primary); text-decoration: none; }
+  .aroc-auth-link { font-size: 11px; color: var(--primary); text-decoration: none; }
   .aroc-auth-link:hover { text-decoration: underline; }
-  .aroc-auth-status { font-size: 13px; width: 100%; margin-top: 4px; }
+  .aroc-auth-status { font-size: 12px; width: 100%; margin-top: 4px; }
 
-  .aroc-region { margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
-  .aroc-region label { font-size: 14px; font-weight: 500; color: var(--text2); }
+  .aroc-region { margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  .aroc-region label { font-size: 13px; font-weight: 500; color: var(--text2); }
   .aroc-region select {
-    font-family: inherit; font-size: 13px; padding: 8px 12px;
-    border-radius: var(--radius); border: 1px solid var(--border2);
-    background: var(--bg2); color: var(--text);
+    font-family: inherit; font-size: 12px; padding: 7px 10px;
+    border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text);
   }
 
-  .aroc-options { margin-bottom: 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-  .aroc-cvp-toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text); }
-  .aroc-cvp-toggle input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
-  .aroc-cvp-extra { display: flex; align-items: center; gap: 8px; }
-  .aroc-cvp-extra label { font-size: 13px; color: var(--text2); white-space: nowrap; }
+  .aroc-options { margin-bottom: 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .aroc-cvp-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text); }
+  .aroc-cvp-toggle input { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }
+  .aroc-cvp-extra { display: flex; align-items: center; gap: 6px; }
+  .aroc-cvp-extra label { font-size: 12px; color: var(--text2); white-space: nowrap; }
   .aroc-cvp-extra input {
-    width: 80px; font-family: inherit; font-size: 13px; padding: 6px 10px;
-    border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg2); color: var(--text);
+    width: 70px; font-family: inherit; font-size: 12px; padding: 5px 8px;
+    border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text);
   }
   .aroc-cvp-extra select {
-    font-family: inherit; font-size: 13px; padding: 6px 10px;
-    border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg2); color: var(--text);
+    font-family: inherit; font-size: 12px; padding: 5px 8px;
+    border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text);
   }
-  .aroc-license-note { font-size: 12px; color: var(--text3); font-style: italic; }
+  .aroc-license-note { font-size: 11px; color: var(--text3); font-style: italic; }
 
-  .aroc-items-table { width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 20px; }
+  .aroc-items-table { width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 16px; }
   .aroc-items-table th {
-    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
-    color: var(--text3); font-weight: 600; padding: 8px 6px; border-bottom: 2px solid var(--border2);
+    text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text3); font-weight: 600; padding: 6px 4px; border-bottom: 2px solid var(--border2);
   }
-  .aroc-items-table td { padding: 10px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .aroc-items-table td { padding: 8px 4px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   .aroc-items-table select {
-    font-family: inherit; font-size: 12px; padding: 6px 8px; width: 100%;
-    border-radius: 6px; border: 1px solid var(--border2); background: var(--bg2); color: var(--text);
+    font-family: inherit; font-size: 11px; padding: 5px 6px; width: 100%;
+    border-radius: 5px; border: 1px solid var(--border); background: var(--bg2); color: var(--text);
   }
-  .aroc-items-table .qty { text-align: center; font-weight: 600; font-size: 14px; }
+  .aroc-items-table .qty { text-align: center; font-weight: 600; font-size: 13px; }
   .aroc-status-ok { color: var(--teal600); font-weight: 600; }
-  .aroc-status-err { color: var(--coral600); font-weight: 600; font-size: 12px; }
+  .aroc-status-err { color: var(--coral600); font-weight: 600; font-size: 11px; }
   .aroc-status-pending { color: var(--text3); }
 
-  .aroc-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .aroc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .aroc-actions button {
-    padding: 10px 20px; font-size: 14px; font-weight: 600; border-radius: var(--radius);
+    padding: 9px 18px; font-size: 13px; font-weight: 600; border-radius: var(--radius);
     border: none; cursor: pointer; font-family: inherit; transition: all 0.15s;
   }
   .aroc-export-go { background: var(--primary); color: white; }
   .aroc-export-go:hover { background: var(--primary-hover); }
   .aroc-export-go:disabled { opacity: 0.5; cursor: not-allowed; }
-  .aroc-summary { margin-top: 16px; font-size: 13px; padding: 12px; border-radius: var(--radius); }
+  .aroc-summary { margin-top: 12px; font-size: 12px; padding: 10px; border-radius: var(--radius); }
+
+  /* ── Responsive ── */
+  @media (max-width: 1200px) {
+    .diagram-col { width: 280px; }
+  }
+  @media (max-width: 1000px) {
+    .results-layout { flex-direction: column; }
+    .diagram-col { width: 100%; }
+  }
+  @media (max-width: 700px) {
+    :root { --sidebar-w: 300px; }
+    .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
+  }
+  @media (max-width: 520px) {
+    body { height: auto; overflow: auto; }
+    .topbar { position: sticky; top: 0; }
+    .sidebar {
+      position: static;
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-scroll { overflow-y: visible; flex: none; }
+    .sidebar-footer { position: sticky; bottom: 0; z-index: 10; }
+    .main-content {
+      position: static;
+      left: auto;
+      padding: 16px;
+      overflow-y: visible;
+    }
+    .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
+  }
 
   @media print {
-    body { background: white; padding: 0; color: black; }
-    .card, .metric-card, .result-section, .diagram-wrapper { box-shadow: none; border-color: #ccc; }
+    body { background: white; color: black; height: auto; overflow: visible; }
+    .topbar, .sidebar { display: none; }
+    .main-content { position: static; padding: 0; overflow: visible; }
+    .results-layout { flex-direction: column; }
+    .diagram-col { width: 100%; }
+    .metric-card, .result-section, .diagram-wrapper { box-shadow: none; border-color: #ccc; }
     .calc-btn, .aroc-btn { display: none; }
-    #results .result-section, #results .diagram-wrapper { break-inside: avoid; }
+    .result-section, .diagram-wrapper { break-inside: avoid; }
   }
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="page-header">
-    <div>
-      <h1>AI backend network calculator</h1>
-      <p class="subtitle">Switch counts, optics, and cabling for GPU clusters</p>
-    </div>
-    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark theme">
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">AI</div>
+    <h1>AI Backend Network Calculator</h1>
+  </div>
+  <div class="topbar-right">
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
       <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
   </div>
-
-  <div class="card">
-    <p class="section-label">Cluster size</p>
-    <div class="input-row">
-      <label>Total GPUs</label>
-      <input type="number" id="total-gpus" min="1" placeholder="e.g. 4096" oninput="syncFromTotal()">
-    </div>
-    <div class="or-divider">or</div>
-    <div class="input-row">
-      <label>Nodes (servers)</label>
-      <input type="number" id="num-nodes" min="1" placeholder="e.g. 512" oninput="syncFromNodes()">
-    </div>
-    <div class="input-row">
-      <label>GPUs per node</label>
-      <input type="number" id="gpus-per-node" min="1" value="8" oninput="syncFromNodes()">
-    </div>
-    <div class="input-row">
-      <label>Links per GPU</label>
-      <input type="number" id="links-per-gpu" min="1" value="1" oninput="autoSelectPlatforms()">
-      <span class="hint">e.g. 1 (standard) or 2</span>
-    </div>
-  </div>
-
-  <div class="card">
-    <p class="section-label">Fabric tier</p>
-    <div class="tier-selector">
-      <label class="tier-opt">
-        <input type="radio" name="tier" value="1" onchange="updateTierHint()">
-        <div class="tier-opt-inner">
-          <div class="tier-opt-icon">▪</div>
-          <div class="tier-opt-name">Single-tier</div>
-          <div class="tier-opt-range">up to ~1,152 GPUs</div>
-        </div>
-      </label>
-      <label class="tier-opt">
-        <input type="radio" name="tier" value="2" checked onchange="updateTierHint()">
-        <div class="tier-opt-inner">
-          <div class="tier-opt-icon">▪▪</div>
-          <div class="tier-opt-name">Two-tier</div>
-          <div class="tier-opt-range">~1K – 74K GPUs</div>
-        </div>
-      </label>
-      <label class="tier-opt">
-        <input type="radio" name="tier" value="3" onchange="updateTierHint()">
-        <div class="tier-opt-inner">
-          <div class="tier-opt-icon">▪▪▪</div>
-          <div class="tier-opt-name">Three-tier</div>
-          <div class="tier-opt-range">74K+ GPUs</div>
-        </div>
-      </label>
-    </div>
-    <div class="tier-hint" id="tier-hint">Leaf-spine Clos — the standard for most AI training clusters.</div>
-  </div>
-
-  <div class="card">
-    <p class="section-label">Switch configuration</p>
-    
-    <div class="input-row" id="leaf-radix-row">
-      <label>Leaf switch</label>
-      <select id="leaf-radix" onchange="toggleCustomRadix('leaf')"></select>
-      <input type="number" id="leaf-radix-custom" min="2" max="1024" step="2" placeholder="ports" style="display:none; width:80px" oninput="clearResults()">
-      <span class="hint" id="leaf-radix-hint">Arista 800G platform</span>
-    </div>
-    <div class="input-row" id="spine-radix-row">
-      <label>Spine switch</label>
-      <select id="spine-radix" onchange="toggleCustomRadix('spine')"></select>
-      <input type="number" id="spine-radix-custom" min="2" max="1024" step="2" placeholder="ports" style="display:none; width:80px" oninput="clearResults()">
-      <span class="hint" id="spine-radix-hint">Arista 800G platform</span>
-    </div>
-
-    <div class="input-row" id="single-tier-ports-row" style="display:none">
-      <label>Ports per line card</label>
-      <input type="number" id="linecard-ports" min="16" max="36" value="36" step="4">
-      <span class="hint">e.g. 36 for OSFP 800G</span>
-    </div>
-
-    <div class="input-row">
-      <label>Planes</label>
-      <input type="number" id="planes" min="1" max="8" value="1" oninput="autoSelectPlatforms()">
-      <span class="hint">redundant fabrics</span>
-    </div>
-    <div class="input-row">
-      <label>Downlink:Uplink ratio</label>
-      <input type="number" id="oversub" min="0.25" max="4" step="0.25" value="1" oninput="clearResults()">
-      <span class="hint">1 = non-blocking, &lt;1 = more uplinks</span>
-    </div>
-    <div class="input-row" id="balance-row">
-      <label>Balance topology</label>
-      <select id="balance-topo" onchange="clearResults()">
-        <option value="1" selected>Yes (adjust spine count)</option>
-        <option value="0">No (minimum spines)</option>
-      </select>
-      <span class="hint">even link distribution</span>
-    </div>
-    <div class="input-row">
-      <label>Host port breakout</label>
-      <select id="breakout" onchange="autoSelectPlatforms()">
-        <option value="1">1:1 (None)</option>
-        <option value="2" selected>1:2 (e.g. 800G → 2x 400G)</option>
-        <option value="4">1:4 (e.g. 800G → 4x 200G)</option>
-      </select>
-      <span class="hint">switch to host links</span>
-    </div>
-  </div>
-
-  <div class="card" id="optics-card">
-    <p class="section-label">Optics</p>
-    <div class="input-row" id="spine-speed-row">
-      <label>Spine link speed</label>
-      <select id="spine-speed" onchange="clearResults()">
-        <option value="400">400G</option>
-        <option value="800" selected>800G</option>
-      </select>
-      <span class="hint">leaf ↔ spine</span>
-    </div>
-    <div class="input-row">
-      <label>Host NIC link speed</label>
-      <select id="host-speed" onchange="clearResults()">
-        <option value="100">100G</option>
-        <option value="200">200G</option>
-        <option value="400" selected>400G</option>
-        <option value="800">800G</option>
-      </select>
-      <span class="hint">host ↔ leaf</span>
-    </div>
-  </div>
-
-  <button class="calc-btn" onclick="calculate()">
-    <svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
-    Calculate Network Requirements
-  </button>
-
-  <div id="results"></div>
 </div>
 
+<div class="layout">
+  <!-- Sidebar: Inputs -->
+  <aside class="sidebar">
+    <div class="sidebar-scroll">
+
+      <!-- Cluster Size -->
+      <div class="input-section" id="section-cluster">
+        <div class="input-section-header" onclick="toggleSection('section-cluster')">
+          <div class="section-icon"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg></div>
+          <span class="section-title">Cluster Size</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="input-section-body">
+          <div class="field">
+            <label>Total GPUs</label>
+            <input type="number" id="total-gpus" min="1" placeholder="e.g. 4096" oninput="syncFromTotal()">
+          </div>
+          <div class="or-divider">or</div>
+          <div class="field-row">
+            <div class="field">
+              <label>Nodes</label>
+              <input type="number" id="num-nodes" min="1" placeholder="e.g. 512" oninput="syncFromNodes()">
+            </div>
+            <div class="field">
+              <label>GPUs / node</label>
+              <input type="number" id="gpus-per-node" min="1" value="8" oninput="syncFromNodes()">
+            </div>
+          </div>
+          <div class="field">
+            <label>Links per GPU</label>
+            <input type="number" id="links-per-gpu" min="1" value="1" oninput="autoSelectPlatforms()">
+            <div class="hint">1 = standard, 2 = dual-rail</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fabric Tier -->
+      <div class="input-section" id="section-tier">
+        <div class="input-section-header" onclick="toggleSection('section-tier')">
+          <div class="section-icon"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
+          <span class="section-title">Fabric Tier</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="input-section-body">
+          <div class="tier-selector">
+            <label class="tier-opt">
+              <input type="radio" name="tier" value="1" onchange="updateTierHint()">
+              <div class="tier-opt-inner">
+                <div class="tier-opt-icon">&#9642;</div>
+                <div class="tier-opt-name">Single</div>
+                <div class="tier-opt-range">&le; 1,152</div>
+              </div>
+            </label>
+            <label class="tier-opt">
+              <input type="radio" name="tier" value="2" checked onchange="updateTierHint()">
+              <div class="tier-opt-inner">
+                <div class="tier-opt-icon">&#9642;&#9642;</div>
+                <div class="tier-opt-name">Two-tier</div>
+                <div class="tier-opt-range">1K – 74K</div>
+              </div>
+            </label>
+            <label class="tier-opt">
+              <input type="radio" name="tier" value="3" onchange="updateTierHint()">
+              <div class="tier-opt-inner">
+                <div class="tier-opt-icon">&#9642;&#9642;&#9642;</div>
+                <div class="tier-opt-name">Three-tier</div>
+                <div class="tier-opt-range">74K+</div>
+              </div>
+            </label>
+          </div>
+          <div class="tier-hint" id="tier-hint">Leaf-spine Clos — the standard for most AI training clusters.</div>
+        </div>
+      </div>
+
+      <!-- Switch Configuration -->
+      <div class="input-section" id="section-switch">
+        <div class="input-section-header" onclick="toggleSection('section-switch')">
+          <div class="section-icon"><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="2"/><line x1="6" y1="9" x2="6" y2="9.01"/><line x1="10" y1="9" x2="10" y2="9.01"/><line x1="14" y1="9" x2="14" y2="9.01"/></svg></div>
+          <span class="section-title">Switch Configuration</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="input-section-body">
+          <div class="field" id="leaf-radix-row">
+            <label>Leaf switch</label>
+            <select id="leaf-radix" onchange="toggleCustomRadix('leaf')"></select>
+            <input type="number" id="leaf-radix-custom" min="2" max="1024" step="2" placeholder="ports" style="display:none; margin-top:4px" oninput="clearResults()">
+            <div class="hint" id="leaf-radix-hint">Arista 800G platform</div>
+          </div>
+          <div class="field" id="spine-radix-row">
+            <label>Spine switch</label>
+            <select id="spine-radix" onchange="toggleCustomRadix('spine')"></select>
+            <input type="number" id="spine-radix-custom" min="2" max="1024" step="2" placeholder="ports" style="display:none; margin-top:4px" oninput="clearResults()">
+            <div class="hint" id="spine-radix-hint">Arista 800G platform</div>
+          </div>
+          <div id="platform-suggestion" class="platform-suggestion" style="display:none">
+            <span id="platform-suggestion-text"></span>
+            <button type="button" class="suggestion-apply" onclick="applySuggestion()">Apply</button>
+            <button type="button" class="suggestion-dismiss" onclick="dismissSuggestion()">&times;</button>
+          </div>
+          <div class="field" id="single-tier-ports-row" style="display:none">
+            <label>Ports per line card</label>
+            <input type="number" id="linecard-ports" min="16" max="36" value="36" step="4">
+            <div class="hint">e.g. 36 for OSFP 800G</div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Planes</label>
+              <input type="number" id="planes" min="1" max="8" value="1" oninput="autoSelectPlatforms()">
+              <div class="hint">redundant fabrics</div>
+            </div>
+            <div class="field">
+              <label>Down:Up ratio</label>
+              <input type="number" id="oversub" min="0.25" max="4" step="0.25" value="1" oninput="clearResults()">
+              <div class="hint">1 = non-blocking</div>
+            </div>
+          </div>
+          <div class="field" id="balance-row">
+            <label>Balance topology</label>
+            <select id="balance-topo" onchange="clearResults()">
+              <option value="1" selected>Yes (adjust spine count)</option>
+              <option value="0">No (minimum spines)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Host port breakout</label>
+            <select id="breakout" onchange="autoSelectPlatforms()">
+              <option value="1">1:1 (None)</option>
+              <option value="2" selected>1:2 (800G &rarr; 2&times; 400G)</option>
+              <option value="4">1:4 (800G &rarr; 4&times; 200G)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Optics -->
+      <div class="input-section" id="section-optics">
+        <div class="input-section-header" onclick="toggleSection('section-optics')">
+          <div class="section-icon"><svg viewBox="0 0 24 24"><path d="M12 22v-4"/><path d="M8 22v-4"/><rect x="6" y="14" width="8" height="4" rx="1"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="12" y1="2" x2="12" y2="6"/><path d="M6 6h8v4a4 4 0 0 1-8 0V6z"/></svg></div>
+          <span class="section-title">Optics</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="input-section-body">
+          <div class="field" id="spine-speed-row">
+            <label>Spine link speed</label>
+            <select id="spine-speed" onchange="clearResults()">
+              <option value="400">400G</option>
+              <option value="800" selected>800G</option>
+            </select>
+            <div class="hint">leaf &harr; spine</div>
+          </div>
+          <div class="field">
+            <label>Host NIC link speed</label>
+            <select id="host-speed" onchange="syncBreakout(); autoSelectPlatforms()">
+              <option value="100">100G</option>
+              <option value="200">200G</option>
+              <option value="400" selected>400G</option>
+              <option value="800">800G</option>
+            </select>
+            <div class="hint">host &harr; leaf</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="calc-btn" onclick="calculate()">
+        <svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+        Calculate
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main: Results + Diagram -->
+  <main class="main-content">
+    <div class="results-layout">
+      <div class="results-col" id="results">
+        <div class="empty-state">
+          <div class="empty-state-icon">
+            <svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+          </div>
+          <h2>No results yet</h2>
+          <p>Enter your cluster size and configuration, then click Calculate to see network requirements.</p>
+        </div>
+      </div>
+      <div class="diagram-col" id="diagram-panel"></div>
+    </div>
+  </main>
+</div>
+
+<!-- AROC Modal (unchanged) -->
 <div class="aroc-overlay" id="aroc-modal" onclick="if(event.target===this)closeArocModal()">
   <div class="aroc-panel">
     <h2>
-      <svg viewBox="0 0 24 24" width="22" height="22" stroke="var(--primary)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--primary)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       Export to AROC
       <button class="aroc-close" onclick="closeArocModal()">&times;</button>
     </h2>
     <div class="aroc-auth">
       <input type="password" id="aroc-token" placeholder="Paste AROC bearer token">
       <button class="aroc-auth-btn" onclick="connectAroc()">Connect</button>
-      <a class="aroc-auth-link" href="https://aroc.aristanetworks.com" target="_blank" rel="noopener">Login to AROC ↗</a>
+      <a class="aroc-auth-link" href="https://aroc.aristanetworks.com" target="_blank" rel="noopener">Login to AROC &#8599;</a>
       <div class="aroc-auth-status" id="aroc-auth-status"></div>
     </div>
     <div class="aroc-region" id="aroc-region-row" style="display:none">
@@ -583,6 +844,10 @@
 </div>
 
 <script>
+function toggleSection(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
+
 function toggleTheme() {
   const root = document.documentElement;
   const current = root.getAttribute('data-theme');
@@ -673,6 +938,8 @@ const AROC_OPTICS = {
 };
 
 let lastCalcResult = null;
+let pendingSuggestion = null;
+let suggestionDismissed = false;
 let arocToken = null;
 let arocRegions = [];
 let platformData = {};
@@ -711,7 +978,10 @@ function populateDropdowns() {
   spineSelect.value = '64';
 }
 
-function clearResults() { document.getElementById('results').innerHTML = ''; }
+function clearResults() {
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('diagram-panel').innerHTML = '';
+}
 
 function toggleCustomRadix(role) {
   clearResults();
@@ -719,8 +989,10 @@ function toggleCustomRadix(role) {
   const custom = document.getElementById(role + '-radix-custom');
   const hint = document.getElementById(role + '-radix-hint');
   const isCustom = select.value === 'other';
-  custom.style.display = isCustom ? 'inline-block' : 'none';
+  custom.style.display = isCustom ? 'block' : 'none';
   hint.textContent = isCustom ? 'custom port count' : 'Arista 800G platform';
+  document.getElementById('platform-suggestion').style.display = 'none';
+  pendingSuggestion = null;
 }
 
 function minPlatformForPorts(portsNeeded) {
@@ -773,6 +1045,7 @@ function getRadix(role) {
 
 function autoSelectPlatforms() {
   clearResults();
+  suggestionDismissed = false;
   const tierNum = parseInt(document.querySelector('input[name=tier]:checked').value);
 
   const totalGPUs   = parseInt(document.getElementById('total-gpus').value) || 0;
@@ -807,18 +1080,56 @@ function setPlatformSelection(leafRadix, spineRadix) {
   document.getElementById('spine-radix-custom').style.display = 'none';
 }
 
+function showPlatformSuggestion(leafRadix, spineRadix) {
+  const tierNum = parseInt(document.querySelector('input[name=tier]:checked').value);
+  const banner = document.getElementById('platform-suggestion');
+  const textEl = document.getElementById('platform-suggestion-text');
+  const currentSpine = document.getElementById('spine-radix').value;
+  const currentLeaf = document.getElementById('leaf-radix').value;
+  const spineMatch = String(currentSpine) === String(spineRadix);
+  const leafMatch = tierNum === 1 || String(currentLeaf) === String(leafRadix);
+  if (spineMatch && leafMatch) {
+    banner.style.display = 'none';
+    pendingSuggestion = null;
+    return;
+  }
+  if (suggestionDismissed) { banner.style.display = 'none'; return; }
+  pendingSuggestion = { leafRadix, spineRadix };
+  const sp = getPlatformByRadix(spineRadix);
+  let msg;
+  if (tierNum === 1) {
+    msg = 'Suggested: <strong>' + sp.desc + '</strong>';
+  } else {
+    const lp = getPlatformByRadix(leafRadix);
+    msg = 'Suggested — Leaf: <strong>' + lp.desc + '</strong>, Spine: <strong>' + sp.desc + '</strong>';
+  }
+  textEl.innerHTML = msg;
+  banner.style.display = 'flex';
+}
+
+function applySuggestion() {
+  if (!pendingSuggestion) return;
+  setPlatformSelection(pendingSuggestion.leafRadix, pendingSuggestion.spineRadix);
+  document.getElementById('platform-suggestion').style.display = 'none';
+  pendingSuggestion = null;
+  suggestionDismissed = false;
+  clearResults();
+}
+
+function dismissSuggestion() {
+  document.getElementById('platform-suggestion').style.display = 'none';
+  suggestionDismissed = true;
+}
+
 function autoSelect1Tier(linksPerPlane, breakout) {
   const portsNeeded = Math.ceil(linksPerPlane / breakout);
-  const spineSelect = document.getElementById('spine-radix');
   for (const p of PLATFORMS) {
     if (p.radix >= portsNeeded) {
-      spineSelect.value = p.radix;
-      document.getElementById('spine-radix-custom').style.display = 'none';
+      showPlatformSuggestion(null, p.radix);
       return;
     }
   }
-  spineSelect.value = PLATFORMS[PLATFORMS.length - 1].radix;
-  document.getElementById('spine-radix-custom').style.display = 'none';
+  showPlatformSuggestion(null, PLATFORMS[PLATFORMS.length - 1].radix);
 }
 
 function autoSelect2Tier(linksPerPlane, breakout) {
@@ -836,14 +1147,14 @@ function autoSelect2Tier(linksPerPlane, breakout) {
         if (pass === 0 && sp.radix < lp.radix) continue;
         const spinePerPlane = Math.ceil((leafPerPlane * uplinks) / sp.radix);
         if (spinePerPlane <= uplinks && uplinks % spinePerPlane === 0) {
-          setPlatformSelection(lp.radix, sp.radix);
+          showPlatformSuggestion(lp.radix, sp.radix);
           return;
         }
       }
     }
   }
 
-  setPlatformSelection(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
+  showPlatformSuggestion(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
 }
 
 function autoSelect3Tier(linksPerPlane, breakout) {
@@ -868,22 +1179,21 @@ function autoSelect3Tier(linksPerPlane, breakout) {
         if (pass === 0 && sp.radix < lp.radix) continue;
         const spinePerPlane = Math.ceil(spinePortsNeeded / sp.radix);
         if (spinePerPlane <= uplinks && uplinks % spinePerPlane === 0) {
-          setPlatformSelection(lp.radix, sp.radix);
+          showPlatformSuggestion(lp.radix, sp.radix);
           return;
         }
       }
     }
   }
 
-  setPlatformSelection(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
+  showPlatformSuggestion(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
 }
 
 function updateTierHint() {
   clearResults();
   const t = document.querySelector('input[name=tier]:checked').value;
   document.getElementById('tier-hint').textContent = TIER_HINTS[t];
-  
-  // Toggle between Inputs
+
   const leafRow = document.getElementById('leaf-radix-row');
   const spineRow = document.getElementById('spine-radix-row');
   const portsRow = document.getElementById('single-tier-ports-row');
@@ -892,22 +1202,23 @@ function updateTierHint() {
 
   if (t === '1') {
     leafRow.style.display = 'none';
-    spineRow.style.display = 'flex';
+    spineRow.style.display = 'block';
     portsRow.style.display = 'none';
     spineSpeedRow.style.display = 'none';
     balanceRow.style.display = 'none';
   } else {
-    leafRow.style.display = 'flex';
-    spineRow.style.display = 'flex';
+    leafRow.style.display = 'block';
+    spineRow.style.display = 'block';
     portsRow.style.display = 'none';
-    spineSpeedRow.style.display = 'flex';
-    balanceRow.style.display = 'flex';
+    spineSpeedRow.style.display = 'block';
+    balanceRow.style.display = 'block';
   }
   autoSelectPlatforms();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   populateDropdowns();
+  syncBreakout();
   updateTierHint();
 });
 
@@ -923,6 +1234,24 @@ function syncFromNodes() {
   const gpn = parseInt(document.getElementById('gpus-per-node').value) || 8;
   if (n > 0) document.getElementById('total-gpus').value = n * gpn;
   autoSelectPlatforms();
+}
+
+function syncBreakout() {
+  const hostSpeed = parseInt(document.getElementById('host-speed').value) || 400;
+  const breakoutSelect = document.getElementById('breakout');
+  if (hostSpeed >= 800) {
+    if (!breakoutSelect.dataset.savedValue) {
+      breakoutSelect.dataset.savedValue = breakoutSelect.value;
+    }
+    breakoutSelect.value = '1';
+    breakoutSelect.disabled = true;
+  } else {
+    breakoutSelect.disabled = false;
+    if (breakoutSelect.dataset.savedValue) {
+      breakoutSelect.value = breakoutSelect.dataset.savedValue;
+      delete breakoutSelect.dataset.savedValue;
+    }
+  }
 }
 
 function opticType(speed) {
@@ -949,10 +1278,10 @@ function mkSection(icon, title, rows, note) {
 
 function opticsSection(rows, noteText) {
   let s = '<div class="result-section"><h3>' + iconPlug() + 'Optics breakdown</h3>';
-  s += '<p style="font-size:13px;color:var(--text3);margin-bottom:16px">Each link requires transceivers at both ends. Breakouts split a single switch optic into multiple host connections.</p>';
+  s += '<p style="font-size:12px;color:var(--text3);margin-bottom:12px">Each link requires transceivers at both ends. Breakouts split a single switch optic into multiple host connections.</p>';
   s += '<table class="breakdown-table">';
   for (const [k, v, isSub, spacer] of rows) {
-    const style = spacer ? ' style="padding-top:16px"' : '';
+    const style = spacer ? ' style="padding-top:14px"' : '';
     s += '<tr' + (isSub ? ' class="subtotal"' : '') + '><td' + style + '>' + k + '</td><td' + style + '>' + v + '</td></tr>';
   }
   s += '</table><div class="note-box">' + noteText + '</div></div>';
@@ -976,16 +1305,16 @@ function calculate() {
   const breakout    = parseInt(document.getElementById('breakout') ? document.getElementById('breakout').value : 1) || 1;
   const spineSpeed  = parseInt(document.getElementById('spine-speed').value) || 800;
   const hostSpeed   = parseInt(document.getElementById('host-speed').value) || 400;
-  
+
   const tierNum     = parseInt(document.querySelector('input[name=tier]:checked').value);
   const el          = document.getElementById('results');
+  document.getElementById('diagram-panel').innerHTML = '';
 
   if (!totalGPUs && !numNodes) {
     el.innerHTML = '<div class="error-msg">Enter the number of GPUs or nodes to get started.</div>';
     return;
   }
 
-  // Determine physical radix based on tier type
   let leafRadix = 64, spineRadix = 64;
   let leafPlatform = null, spinePlatform = null;
 
@@ -999,14 +1328,12 @@ function calculate() {
     spinePlatform = isCustomPlatform('spine') ? { name: 'Custom', radix: spineRadix, type: 'custom', desc: spineRadix + '-port (custom)' } : getPlatformByRadix(spineRadix);
   }
 
-  // Core capacity calculations
   const hosts  = numNodes || Math.ceil(totalGPUs / gpusPerNode);
   const gpus   = totalGPUs || hosts * gpusPerNode;
-  
+
   const totalHostLinks = gpus * linksPerGpu;
   const linksPerPlane  = Math.ceil(totalHostLinks / planes);
 
-  // Leaf switch topology math
   const physDownlinks = Math.floor(leafRadix * oversub / (1 + oversub));
   const effDownlinks  = physDownlinks * breakout;
   const uplinks       = leafRadix - physDownlinks;
@@ -1016,13 +1343,11 @@ function calculate() {
 
   let warnHtml = '';
 
-  // Tier-appropriate GPU count warnings
   if (tierNum === 1 && gpus > 1152)
     warnHtml += '<div class="warn-box">Your cluster has ' + fmtN(gpus) + ' GPUs — single-tier is typically used up to ~1,152. Results shown as requested; consider two-tier for production.</div>';
   if (tierNum === 3 && gpus < 10000)
     warnHtml += '<div class="warn-box">Three-tier is typically used for 74K+ GPU clusters. Two-tier may be simpler and more cost-effective at ' + fmtN(gpus) + ' GPUs.</div>';
 
-  // Validate leaf downlinks/uplinks for tier 2 & 3
   if (tierNum >= 2) {
     if (physDownlinks <= 0) {
       el.innerHTML = '<div class="error-msg">Invalid configuration: the downlink:uplink ratio (' + oversub +
@@ -1046,7 +1371,6 @@ function calculate() {
   let switchHtml = '', optHtml = '', diagramHtml = '';
   let totalSpine = 0, totalLeaf = 0;
 
-  // -- Diagram Helpers --
   const linksPerNode = gpusPerNode * linksPerGpu;
   const hostLinkStr = `${linksPerNode}× ${hostSpeed}G links` + (breakout > 1 ? ` (into ${linksPerNode/breakout}× switch ports)` : '');
   const diagTitle = 'Logical Data Path (Single Node Slice' + (planes > 1 ? ` · ${planes} Planes` : '') + ')';
@@ -1210,13 +1534,13 @@ function calculate() {
 
     const bundleSize    = uplinks / spinePerPlane;
     const bundleStr     = Number.isInteger(bundleSize) ? bundleSize : bundleSize.toFixed(2) + ' (unbalanced)';
-    
+
     const spineLinks    = leafPerPlane * uplinks * planes;
-    const spOptBase     = spineLinks * 2;  
-    
+    const spOptBase     = spineLinks * 2;
+
     const hOptSwitchBase= Math.ceil(totalHostLinks / breakout);
     const hOptHostBase  = totalHostLinks;
-    const hOptBase      = hOptSwitchBase + hOptHostBase;   
+    const hOptBase      = hOptSwitchBase + hOptHostBase;
 
     if (bundleSize < 1) {
       const minCombo = minBalanced2Tier(linksPerPlane, breakout, oversub);
@@ -1248,7 +1572,7 @@ function calculate() {
       ['Total uplinks used', uplinks],
       ['Links per spine (bundle)', bundleStr],
     ], leafNote);
-    if (balanceNote) switchHtml += '<div class="note-box" style="margin-bottom:16px">' + balanceNote + '</div>';
+    if (balanceNote) switchHtml += '<div class="note-box" style="margin-bottom:12px">' + balanceNote + '</div>';
 
     let optRows = [
       ['Leaf ↔ spine links', fmtN(spineLinks)],
@@ -1279,14 +1603,14 @@ function calculate() {
   } else {
     const leafRadix   = getRadix('leaf');
     const spineRadix  = getRadix('spine');
-    
+
     const physDownlinks = Math.floor(leafRadix * oversub / (1 + oversub));
     const effDownlinks  = physDownlinks * breakout;
     const uplinks       = leafRadix - physDownlinks;
 
     const leaf2PerPlane = Math.ceil(linksPerPlane / effDownlinks);
     const totalLeaf2    = leaf2PerPlane * planes;
-    
+
     const a2sDownlinksNeeded = leaf2PerPlane * uplinks;
     const balance3      = document.getElementById('balance-topo').value === '1';
     const origLeaf1PP   = Math.ceil(a2sDownlinksNeeded / physDownlinks);
@@ -1314,18 +1638,18 @@ function calculate() {
 
     const e2aBundle     = uplinks / leaf1PerPlane;
     const e2aBundleStr  = Number.isInteger(e2aBundle) ? e2aBundle : e2aBundle.toFixed(2) + ' (unbalanced)';
-    
+
     const a2sBundle     = uplinks / spinePerPlane;
     const a2sBundleStr  = Number.isInteger(a2sBundle) ? a2sBundle : a2sBundle.toFixed(2) + ' (unbalanced)';
 
     totalLeaf           = totalLeaf1 + totalLeaf2;
-    
+
     const e2aLinks      = leaf2PerPlane * uplinks * planes;
     const a2sLinks      = leaf1PerPlane * uplinks * planes;
-    
-    const a2sBase       = a2sLinks*2; 
-    const e2aBase       = e2aLinks*2; 
-    
+
+    const a2sBase       = a2sLinks*2;
+    const e2aBase       = e2aLinks*2;
+
     const hOptSwitchBase= Math.ceil(totalHostLinks / breakout);
     const hOptHostBase  = totalHostLinks;
     const hBase         = hOptSwitchBase + hOptHostBase;
@@ -1367,7 +1691,7 @@ function calculate() {
       ['Host links per edge', Math.ceil(linksPerPlane / leaf2PerPlane) + (breakout > 1 ? ` (via ${breakout}:1)` : '')],
       ['Links per agg leaf (bundle)', e2aBundleStr],
     ], 'Three-tier Clos scale-out topology.');
-    if (balance3Note) switchHtml += '<div class="note-box" style="margin-bottom:16px">' + balance3Note + '</div>';
+    if (balance3Note) switchHtml += '<div class="note-box" style="margin-bottom:12px">' + balance3Note + '</div>';
 
     let optRows = [
       ['Agg leaf ↔ spine links', fmtN(a2sLinks)],
@@ -1378,7 +1702,7 @@ function calculate() {
       ['Agg-tier subtotal', fmtN(e2aBase), true],
       ['Host ↔ edge leaf links', fmtN(totalHostLinks), false, true]
     ];
-    
+
     if (breakout === 1) {
       optRows.push(['Host-tier optics (×2) · ' + opticType(hostSpeed), fmtN(hBase)]);
     } else {
@@ -1418,13 +1742,14 @@ function calculate() {
     out += metric(subRatio === 1 ? '1:1' : subRatio.toFixed(2) + ':1', 'Subscription', 'down:up port ratio');
   }
   out += '</div>';
-  out += switchHtml + diagramHtml + optHtml;
+  out += switchHtml + optHtml;
 
   const hasCustom = document.getElementById('spine-radix').value === 'other' || (tierNum >= 2 && document.getElementById('leaf-radix').value === 'other');
   buildCalcResult(tierNum, { spinePlatform, leafPlatform, totalSpine, totalLeaf, spineSpeed, hostSpeed, breakout, totalHostLinks, planes });
   if (!hasCustom) out += '<button class="aroc-btn" onclick="openArocModal()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Export to AROC</button>';
 
   el.innerHTML = out;
+  document.getElementById('diagram-panel').innerHTML = diagramHtml;
 }
 
 function buildCalcResult(tierNum, ctx) {
@@ -1538,7 +1863,7 @@ function populateArocItems() {
     let skuCell = '';
     if (item.type === 'switch') {
       const skuName = AROC_SKUS[item.skuKey];
-      skuCell = skuName ? '<span style="font-size:12px;font-family:monospace">' + skuName + '</span>' : '<span style="color:var(--text3)">Unknown</span>';
+      skuCell = skuName ? '<span style="font-size:11px;font-family:monospace">' + skuName + '</span>' : '<span style="color:var(--text3)">Unknown</span>';
     } else if (item.type === 'optic') {
       const opts = AROC_OPTICS[item.opticCat] || [];
       skuCell = '<select id="aroc-optic-' + i + '">' + opts.map((o, j) => '<option value="' + j + '">' + o.label + '</option>').join('') + '</select>';
@@ -1552,16 +1877,16 @@ function populateArocItems() {
         const defLic = getDefaultLicense(item.skuKey, item.role);
         const licTr = document.createElement('tr');
         licTr.style.background = 'var(--bg2)';
-        const licOpts = pd.licenses.map(l => '<option value="' + l.id + '"' + (defLic && l.id === defLic.id ? ' selected' : '') + '>' + l.name + '</option>').join('');
-        licTr.innerHTML = '<td style="padding-left:24px;font-size:12px;color:var(--text2)">↳ License</td><td><select id="aroc-lic-' + i + '" style="font-size:11px">' + licOpts + '</select></td><td class="qty">' + fmtN(item.qty) + '</td><td id="aroc-lic-status-' + i + '" class="aroc-status-pending">—</td>';
+        const licOpts = pd.licenses.map(l => '<option value="' + l.name + '"' + (defLic && l.name === defLic.name ? ' selected' : '') + '>' + l.name + '</option>').join('');
+        licTr.innerHTML = '<td style="padding-left:20px;font-size:11px;color:var(--text2)">↳ License</td><td><select id="aroc-lic-' + i + '" style="font-size:10px">' + licOpts + '</select></td><td class="qty">' + fmtN(item.qty) + '</td><td id="aroc-lic-status-' + i + '" class="aroc-status-pending">—</td>';
         body.appendChild(licTr);
       }
       if (includeCvp && pd && pd.subscriptions.length) {
         const defSub = getDefaultSubscription(item.skuKey);
         const subTr = document.createElement('tr');
         subTr.style.background = 'var(--bg2)';
-        const subOpts = pd.subscriptions.map(s => '<option value="' + s.id + '"' + (defSub && s.id === defSub.id ? ' selected' : '') + '>' + s.name + '</option>').join('');
-        subTr.innerHTML = '<td style="padding-left:24px;font-size:12px;color:var(--text2)">↳ Subscription (' + cvpMonths + 'mo)</td><td><select id="aroc-sub-' + i + '" style="font-size:11px">' + subOpts + '</select></td><td class="qty">' + fmtN(item.qty) + '</td><td id="aroc-sub-status-' + i + '" class="aroc-status-pending">—</td>';
+        const subOpts = pd.subscriptions.map(s => '<option value="' + s.name + '"' + (defSub && s.name === defSub.name ? ' selected' : '') + '>' + s.name + '</option>').join('');
+        subTr.innerHTML = '<td style="padding-left:20px;font-size:11px;color:var(--text2)">↳ Subscription (' + cvpMonths + 'mo)</td><td><select id="aroc-sub-' + i + '" style="font-size:10px">' + subOpts + '</select></td><td class="qty">' + fmtN(item.qty) + '</td><td id="aroc-sub-status-' + i + '" class="aroc-status-pending">—</td>';
         body.appendChild(subTr);
       }
     }
@@ -1691,11 +2016,13 @@ async function exportToAroc() {
         const accessories = [];
         const licSel = document.getElementById('aroc-lic-' + i);
         if (licSel?.value) {
-          accessories.push({ skuId: licSel.value, quantity: item.qty, discount: null, months: null, remarks: '', shippingType: null });
+          const licSkuId = await resolveOpticSkuId(licSel.value);
+          if (licSkuId) accessories.push({ skuId: licSkuId, quantity: item.qty, discount: null, months: null, remarks: '', shippingType: null });
         }
         const subSel = document.getElementById('aroc-sub-' + i);
         if (includeCvp && subSel?.value) {
-          accessories.push({ skuId: subSel.value, quantity: item.qty, discount: null, months: cvpMonths, remarks: '', shippingType: null });
+          const subSkuId = await resolveOpticSkuId(subSel.value);
+          if (subSkuId) accessories.push({ skuId: subSkuId, quantity: item.qty, discount: null, months: cvpMonths, remarks: '', shippingType: null });
         }
 
         const variables = {
