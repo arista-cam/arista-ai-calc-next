@@ -525,7 +525,66 @@
     .calc-btn { display: none; }
     .result-section, .diagram-wrapper { break-inside: avoid; }
   }
+
+  /* ── Topology overlay ── */
+  .topo-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    display: none;
+  }
+  .topo-overlay.active {
+    display: flex; align-items: center; justify-content: center;
+  }
+  .topo-panel {
+    width: 92vw; height: 88vh; max-width: 1400px;
+    display: flex; flex-direction: column;
+    background: var(--bg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+  .topo-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .topo-title { font-weight: 600; font-size: 15px; flex: 1; }
+  .topo-btn {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 4px 10px;
+    font-size: 13px; cursor: pointer; color: var(--text2);
+    transition: all 0.15s ease;
+  }
+  .topo-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .topo-select {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 4px 8px;
+    font-size: 13px; color: var(--text); cursor: pointer;
+    font-family: inherit;
+  }
+  #cy-container { flex: 1; min-height: 0; overflow: hidden; }
+  .cy-tooltip {
+    position: fixed; pointer-events: none;
+    background: var(--panel-bg); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 8px 10px; font-size: 12px; color: var(--text);
+    max-width: 240px; z-index: 1001; line-height: 1.5;
+  }
+  .view-topo-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 12px; padding: 8px 18px;
+    background: transparent; color: var(--primary);
+    border: 1.5px solid var(--primary); border-radius: var(--radius);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .view-topo-btn:hover {
+    background: var(--primary); color: white;
+  }
 </style>
+<script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js"></script>
 </head>
 <body>
 
@@ -736,6 +795,25 @@
   </main>
 </div>
 
+<!-- Topology lightbox overlay -->
+<div class="topo-overlay" id="topo-overlay" onclick="if(event.target===this)closeTopoModal()">
+  <div class="topo-panel">
+    <div class="topo-header">
+      <span class="topo-title" id="topo-title">Network Topology</span>
+      <span id="topo-type-wrap" style="display:none">
+        <select id="topo-type" class="topo-select" onchange="onTopoTypeChange()">
+          <option value="fat-tree">Fat Tree</option>
+          <option value="rail">Rail-Optimized</option>
+        </select>
+      </span>
+      <button class="topo-btn" onclick="fitTopology()" title="Fit to view">Fit</button>
+      <button class="topo-btn" onclick="closeTopoModal()" title="Close">&#x2715;</button>
+    </div>
+    <div id="cy-container"></div>
+  </div>
+</div>
+<div class="cy-tooltip" id="cy-tooltip" style="display:none"></div>
+
 <div id="suggestion-leaf" class="platform-suggestion" style="display:none">
   <span id="suggestion-leaf-text"></span>
   <div style="display:flex;gap:6px;align-items:center">
@@ -772,6 +850,7 @@ function toggleTheme() {
 
   root.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
+  if (d3Svg) renderTopology();
 }
 
 (function() {
@@ -785,6 +864,8 @@ const TIER_HINTS = {
   '3': 'Three-tier Clos — hyperscale fabric for very large clusters. Pod-based for blast-radius containment.',
   '4': '7700R4 Distributed Etherlink — cell-based scheduled fabric presenting as a single non-blocking switch.'
 };
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 const PLATFORMS = [
   { name: '7060X6',        radix: 32,  type: 'fixed',   desc: '7060X6 (32-port)' },
@@ -820,6 +901,7 @@ function populateDropdowns() {
 function clearResults() {
   document.getElementById('results').innerHTML = '';
   document.getElementById('diagram-panel').innerHTML = '';
+  lastTopoConfig = null;
 }
 
 function toggleCustomRadix(role) {
@@ -1429,6 +1511,11 @@ function calculate() {
       ], planes) + '</div>';
     }
 
+    lastTopoConfig = { tier: 1, planes, title: diagTitle,
+      tiers: [{ id: 'spine', label: spinePlatform.name, perPlane: 1, radix: spineRadix }],
+      hosts: { perLeaf: linksPerPlane, linksPerNode, gpusPerNode },
+      links: [{ from: 'spine', to: 'host', bundle: linksPerNode, speed: hostSpeed }] };
+
     const hOptSwitchBase = Math.ceil(totalHostLinks / breakout);
     const hOptHostBase   = totalHostLinks;
     const hostOptBase    = hOptSwitchBase + hOptHostBase;
@@ -1524,6 +1611,17 @@ function calculate() {
       { link: hostLinkStr },
       { title: '1× Compute Node', sub: gpusPerNode + ' GPUs · ' + linksPerNode + ' Backend Links', stacked: false },
     ], planes) + '</div>';
+
+    lastTopoConfig = { tier: 2, planes, title: diagTitle,
+      tiers: [
+        { id: 'spine', label: spinePlatform.name, perPlane: spinePerPlane, radix: spineRadix },
+        { id: 'leaf', label: leafPlatform.name, perPlane: leafPerPlane, radix: leafRadix }
+      ],
+      hosts: { perLeaf: Math.ceil(linksPerPlane / leafPerPlane), linksPerNode, gpusPerNode },
+      links: [
+        { from: 'spine', to: 'leaf', bundle: bundleSize, speed: spineSpeed },
+        { from: 'leaf', to: 'host', bundle: linksPerNode, speed: hostSpeed }
+      ] };
 
   } else if (tierNum === 3) {
     const leafRadix   = getRadix('leaf');
@@ -1652,6 +1750,18 @@ function calculate() {
       { title: '1× Compute Node', sub: gpusPerNode + ' GPUs · ' + linksPerNode + ' Backend Links', stacked: false },
     ], planes) + '</div>';
 
+    lastTopoConfig = { tier: 3, planes, title: diagTitle,
+      tiers: [
+        { id: 'spine', label: spinePlatform.name, perPlane: spinePerPlane, radix: spineRadix },
+        { id: 'aggLeaf', label: leafPlatform.name, perPlane: leaf1PerPlane, radix: leafRadix },
+        { id: 'edgeLeaf', label: leafPlatform.name, perPlane: leaf2PerPlane, radix: leafRadix }
+      ],
+      hosts: { perLeaf: Math.ceil(linksPerPlane / leaf2PerPlane), linksPerNode, gpusPerNode },
+      links: [
+        { from: 'spine', to: 'aggLeaf', bundle: a2sBundle, speed: spineSpeed },
+        { from: 'aggLeaf', to: 'edgeLeaf', bundle: e2aBundle, speed: spineSpeed },
+        { from: 'edgeLeaf', to: 'host', bundle: linksPerNode, speed: hostSpeed }
+      ] };
   }
 
   if (tierNum === 4) {
@@ -1714,6 +1824,17 @@ function calculate() {
       { link: hostLinkStr },
       { title: '1× Compute Node', sub: gpusPerNode + ' GPUs · ' + linksPerNode + ' Backend Links', stacked: false },
     ], planes) + '</div>';
+
+    lastTopoConfig = { tier: 4, planes, title: diagTitle,
+      tiers: [
+        { id: 'spine', label: 'DCS-DS-7720R4', perPlane: desSpinePerPlane, radix: 128 },
+        { id: 'leaf', label: 'DCS-DL-7700R4', perPlane: desLeafPerPlane, radix: 18 }
+      ],
+      hosts: { perLeaf: portsUsedPerLeaf * breakout, linksPerNode, gpusPerNode },
+      links: [
+        { from: 'spine', to: 'leaf', bundle: fabricLinksPerPair, speed: 800 },
+        { from: 'leaf', to: 'host', bundle: linksPerNode, speed: hostSpeed }
+      ] };
   }
 
   const totalSwitches = totalSpine + totalLeaf;
@@ -1741,6 +1862,552 @@ function calculate() {
 
   el.innerHTML = out;
   document.getElementById('diagram-panel').innerHTML = diagramHtml;
+  if (lastTopoConfig) {
+    document.getElementById('diagram-panel').innerHTML +=
+      '<div style="text-align:center"><button class="view-topo-btn" onclick="openTopoModal()">View Full Topology</button></div>';
+  }
+}
+
+let lastTopoConfig = null;
+let currentTopoType = 'fat-tree';
+let d3Svg = null;
+let d3Zoom = null;
+
+const RAIL_COLORS = [
+  '#2ecc71', '#3498db', '#e74c3c', '#1abc9c',
+  '#e67e22', '#9b59b6', '#f39c12', '#e91e63',
+  '#00bcd4', '#ff5722', '#8bc34a', '#673ab7',
+  '#26a69a', '#ef5350', '#42a5f5', '#ffa726',
+];
+
+function openTopoModal() {
+  if (!lastTopoConfig) return;
+  const overlay = document.getElementById('topo-overlay');
+  const titleEl = document.getElementById('topo-title');
+  const c = lastTopoConfig;
+  titleEl.textContent = 'Network Topology' + (c.planes > 1 ? ' (Plane 1 of ' + c.planes + ')' : '');
+  document.getElementById('topo-type-wrap').style.display = c.tier >= 2 ? '' : 'none';
+  document.getElementById('topo-type').value = currentTopoType;
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => renderTopology(), 50);
+  document.addEventListener('keydown', topoEscHandler);
+}
+
+function onTopoTypeChange() {
+  currentTopoType = document.getElementById('topo-type').value;
+  renderTopology();
+}
+
+function closeTopoModal() {
+  document.getElementById('topo-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+  document.getElementById('cy-tooltip').style.display = 'none';
+  document.removeEventListener('keydown', topoEscHandler);
+  d3Svg = null;
+  d3Zoom = null;
+}
+
+function topoEscHandler(e) { if (e.key === 'Escape') closeTopoModal(); }
+
+function buildTopoData() {
+  const c = lastTopoConfig;
+  const nodes = [], edges = [];
+  const MAX_SHOW = 32;
+  const isRail = currentTopoType === 'rail' && c.tier >= 2;
+
+  function addTierNodes(tier, rank) {
+    const count = tier.perPlane;
+    if (count <= MAX_SHOW) {
+      for (let i = 0; i < count; i++) {
+        nodes.push({
+          id: tier.id + '-' + i, label: tier.label + ' ' + (i + 1),
+          tier: tier.id, platform: tier.label, radix: tier.radix, rank
+        });
+      }
+      return count;
+    }
+    for (let i = 0; i < 3; i++) {
+      nodes.push({
+        id: tier.id + '-' + i, label: tier.label + ' ' + (i + 1),
+        tier: tier.id, platform: tier.label, radix: tier.radix, rank
+      });
+    }
+    nodes.push({
+      id: tier.id + '-ellipsis', label: '…+' + (count - 4) + ' more',
+      tier: 'ellipsis', rank
+    });
+    nodes.push({
+      id: tier.id + '-' + (count - 1), label: tier.label + ' ' + count,
+      tier: tier.id, platform: tier.label, radix: tier.radix, rank
+    });
+    return count;
+  }
+
+  const tierCounts = {};
+  c.tiers.forEach((tier, i) => {
+    tierCounts[tier.id] = addTierNodes(tier, i);
+  });
+
+  const hostRank = c.tiers.length;
+  const bottomTier = c.tiers[c.tiers.length - 1];
+  const hostCountPerLeaf = Math.ceil(c.hosts.perLeaf / c.hosts.linksPerNode);
+
+  if (isRail) {
+    const totalNodes = bottomTier.perPlane * hostCountPerLeaf;
+    if (totalNodes <= 4) {
+      for (let i = 0; i < totalNodes; i++) {
+        nodes.push({ id: 'host-' + i, label: 'Node ' + (i + 1), tier: 'host', rank: hostRank });
+      }
+    } else {
+      nodes.push({ id: 'host-0', label: 'Node 1', tier: 'host', rank: hostRank });
+      nodes.push({ id: 'host-ellipsis', label: '…+' + (totalNodes - 2) + ' nodes', tier: 'ellipsis', rank: hostRank });
+      nodes.push({ id: 'host-last', label: 'Node ' + totalNodes, tier: 'host', rank: hostRank });
+    }
+  } else if (tierCounts[bottomTier.id] <= MAX_SHOW) {
+    const bottomCount = Math.min(tierCounts[bottomTier.id], MAX_SHOW);
+    for (let i = 0; i < bottomCount; i++) {
+      nodes.push({ id: 'host-' + i, label: hostCountPerLeaf + ' hosts', tier: 'host', rank: hostRank });
+    }
+  } else {
+    for (let i = 0; i < 3; i++) {
+      nodes.push({ id: 'host-' + i, label: hostCountPerLeaf + ' hosts', tier: 'host', rank: hostRank });
+    }
+    nodes.push({ id: 'host-ellipsis', label: '…', tier: 'ellipsis', rank: hostRank });
+    nodes.push({ id: 'host-last', label: hostCountPerLeaf + ' hosts', tier: 'host', rank: hostRank });
+  }
+
+  const byRank = {};
+  nodes.forEach(n => {
+    if (!byRank[n.rank]) byRank[n.rank] = [];
+    byRank[n.rank].push(n);
+  });
+  const ranks = Object.keys(byRank).sort((a, b) => a - b);
+  const maxInRow = Math.max(...ranks.map(r => byRank[r].length));
+  const GAP_X = 140, GAP_Y = 160;
+  const totalWidth = (maxInRow - 1) * GAP_X;
+
+  for (const rank of ranks) {
+    const row = byRank[rank];
+    const rowWidth = (row.length - 1) * GAP_X;
+    const startX = (totalWidth - rowWidth) / 2;
+    row.forEach((n, i) => {
+      n.pos = { x: startX + i * GAP_X, y: parseInt(rank) * GAP_Y };
+    });
+  }
+
+  for (const link of c.links) {
+    if (link.to === 'host') {
+      if (isRail) {
+        const leafShow = Math.min(tierCounts[link.from], MAX_SHOW);
+        const hostNodes = nodes.filter(n => n.tier === 'host');
+        for (const hn of hostNodes) {
+          for (let t = 0; t < leafShow; t++) {
+            edges.push({
+              source: link.from + '-' + t, target: hn.id,
+              label: '1×' + link.speed + 'G',
+              weight: 1, bundle: 1, speed: link.speed
+            });
+          }
+        }
+      } else {
+        const bCount = Math.min(tierCounts[link.from], MAX_SHOW);
+        for (let i = 0; i < bCount; i++) {
+          edges.push({
+            source: link.from + '-' + i, target: 'host-' + i,
+            label: c.hosts.linksPerNode + '×' + link.speed + 'G',
+            weight: Math.min(Math.max(1, c.hosts.linksPerNode / 2), 4),
+            bundle: c.hosts.linksPerNode, speed: link.speed
+          });
+        }
+        if (tierCounts[link.from] > MAX_SHOW) {
+          edges.push({
+            source: link.from + '-' + (tierCounts[link.from] - 1), target: 'host-last',
+            label: c.hosts.linksPerNode + '×' + link.speed + 'G',
+            weight: Math.min(Math.max(1, c.hosts.linksPerNode / 2), 4),
+            bundle: c.hosts.linksPerNode, speed: link.speed
+          });
+        }
+      }
+      continue;
+    }
+
+    // Inter-tier edges: ALWAYS full mesh (both fat tree and rail-optimized)
+    const fromCount = tierCounts[link.from];
+    const toCount = tierCounts[link.to];
+    const fromShow = Math.min(fromCount, MAX_SHOW);
+    const toShow = Math.min(toCount, MAX_SHOW);
+    const bStr = Number.isInteger(link.bundle) ? String(link.bundle) : link.bundle.toFixed(1);
+
+    if (fromShow * toShow <= 200) {
+      for (let f = 0; f < fromShow; f++) {
+        for (let t = 0; t < toShow; t++) {
+          edges.push({
+            source: link.from + '-' + f, target: link.to + '-' + t,
+            label: bStr + '×' + link.speed + 'G',
+            weight: Math.min(Math.max(1, link.bundle / 2), 4),
+            bundle: link.bundle, speed: link.speed
+          });
+        }
+      }
+    } else {
+      for (let t = 0; t < toShow; t++) {
+        edges.push({
+          source: link.from + '-0', target: link.to + '-' + t,
+          label: fromShow + '×' + bStr + '×' + link.speed + 'G',
+          weight: 3, bundle: link.bundle, speed: link.speed
+        });
+      }
+    }
+
+    if (fromCount > MAX_SHOW && toCount > MAX_SHOW) {
+      edges.push({
+        source: link.from + '-' + (fromCount - 1), target: link.to + '-' + (toCount - 1),
+        label: bStr + '×' + link.speed + 'G',
+        weight: Math.min(Math.max(1, link.bundle / 2), 4),
+        bundle: link.bundle, speed: link.speed
+      });
+    }
+  }
+
+  return { nodes, edges };
+}
+
+function renderTopology() {
+  const container = document.getElementById('cy-container');
+  container.innerHTML = '';
+
+  const data = buildTopoData();
+  const posLookup = {};
+  data.nodes.forEach(n => { posLookup[n.id] = n.pos; });
+
+  const s = getComputedStyle(document.documentElement);
+  const v = n => s.getPropertyValue(n).trim();
+  const c = lastTopoConfig;
+  const isRail = currentTopoType === 'rail' && c.tier >= 2;
+  const isDark = parseInt(v('--bg').replace('#', '').slice(0, 2), 16) < 80;
+
+  // Build tier lookup for edge coloring
+  const tierById = {};
+  data.nodes.forEach(n => { tierById[n.id] = n.tier; });
+
+  function hexToRgb(hex) {
+    const n = parseInt(hex.replace('#', ''), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function rgbToHex(r, g, b) {
+    return '#' + [r, g, b].map(c => Math.round(c).toString(16).padStart(2, '0')).join('');
+  }
+  function tintColor(hex, amount) {
+    const [r, g, b] = hexToRgb(hex);
+    return rgbToHex(r + (255 - r) * amount, g + (255 - g) * amount, b + (255 - b) * amount);
+  }
+  function shadeColor(hex, amount) {
+    const [r, g, b] = hexToRgb(hex);
+    return rgbToHex(r * (1 - amount), g * (1 - amount), b * (1 - amount));
+  }
+
+  function colorForLeaf(leafId) {
+    const idx = parseInt(leafId.split('-').pop());
+    if (!isNaN(idx)) return RAIL_COLORS[idx % RAIL_COLORS.length];
+    return v('--accent');
+  }
+
+  function nodeColor(d) {
+    if (d.tier === 'leaf' || d.tier === 'edgeLeaf') return colorForLeaf(d.id);
+    if (d.tier === 'spine') return v('--primary');
+    if (d.tier === 'aggLeaf') return v('--primary-hover');
+    return null;
+  }
+
+  function nodeFillColor(d) {
+    const base = nodeColor(d);
+    if (base) return isDark ? shadeColor(base, 0.65) : tintColor(base, 0.82);
+    if (d.tier === 'host') return v('--bg2');
+    if (d.tier === 'ellipsis') return v('--bg3');
+    return v('--bg2');
+  }
+
+  function nodeStrokeColor(d) {
+    const base = nodeColor(d);
+    if (base) return isDark ? tintColor(base, 0.15) : shadeColor(base, 0.1);
+    if (d.tier === 'host') return v('--border');
+    if (d.tier === 'ellipsis') return v('--border2');
+    return 'none';
+  }
+
+  function nodeTextColor(d) {
+    const base = nodeColor(d);
+    if (base) return isDark ? tintColor(base, 0.35) : shadeColor(base, 0.25);
+    if (d.tier === 'host') return v('--text2');
+    if (d.tier === 'ellipsis') return v('--text3');
+    return v('--text');
+  }
+
+  function edgeStroke(d) {
+    const src = d.source, tgt = d.target;
+    if (tierById[src] === 'leaf' || tierById[src] === 'edgeLeaf') return colorForLeaf(src);
+    if (tierById[tgt] === 'leaf' || tierById[tgt] === 'edgeLeaf') return colorForLeaf(tgt);
+    return v('--text3');
+  }
+
+  // Build adjacency map for hover highlight
+  const adj = {};
+  data.nodes.forEach(n => { adj[n.id] = new Set(); });
+  data.edges.forEach(e => {
+    if (adj[e.source]) adj[e.source].add(e.target);
+    if (adj[e.target]) adj[e.target].add(e.source);
+  });
+
+  const svg = d3.select(container).append('svg')
+    .attr('width', '100%')
+    .attr('height', '100%')
+    .style('font-family', "'Inter', 'Barlow', system-ui, sans-serif");
+
+  // SVG defs: drop shadow + edge gradients
+  const defs = svg.append('defs');
+
+  const shadow = defs.append('filter')
+    .attr('id', 'node-shadow').attr('x', '-20%').attr('y', '-20%')
+    .attr('width', '140%').attr('height', '140%');
+  shadow.append('feDropShadow')
+    .attr('dx', 0).attr('dy', 2).attr('stdDeviation', 3)
+    .attr('flood-color', isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)');
+
+  // Create gradient defs for each edge
+  data.edges.forEach((e, i) => {
+    const leafColor = edgeStroke(e);
+    const srcPos = posLookup[e.source], tgtPos = posLookup[e.target];
+    const grad = defs.append('linearGradient')
+      .attr('id', 'eg-' + i)
+      .attr('gradientUnits', 'userSpaceOnUse')
+      .attr('x1', srcPos.x).attr('y1', srcPos.y)
+      .attr('x2', tgtPos.x).attr('y2', tgtPos.y);
+    const sColor = (tierById[e.source] === 'spine') ? v('--primary') :
+                   (tierById[e.source] === 'aggLeaf') ? v('--primary-hover') :
+                   (tierById[e.source] === 'leaf' || tierById[e.source] === 'edgeLeaf') ? colorForLeaf(e.source) :
+                   leafColor;
+    const tColor = (tierById[e.target] === 'spine') ? v('--primary') :
+                   (tierById[e.target] === 'aggLeaf') ? v('--primary-hover') :
+                   (tierById[e.target] === 'leaf' || tierById[e.target] === 'edgeLeaf') ? colorForLeaf(e.target) :
+                   leafColor;
+    grad.append('stop').attr('offset', '0%').attr('stop-color', sColor).attr('stop-opacity', 0.6);
+    grad.append('stop').attr('offset', '100%').attr('stop-color', tColor).attr('stop-opacity', 0.6);
+  });
+
+  const g = svg.append('g').attr('class', 'topo-canvas');
+
+  const zoom = d3.zoom()
+    .scaleExtent([0.1, 4])
+    .on('zoom', (event) => g.attr('transform', event.transform));
+  svg.call(zoom);
+  svg.on('dblclick.zoom', null);
+  d3Svg = svg;
+  d3Zoom = zoom;
+
+  // Draw edges with gradient stroke and draw-in animation
+  const edgeGroup = g.append('g').attr('class', 'topo-edges');
+  const edgeLines = edgeGroup.selectAll('line')
+    .data(data.edges)
+    .join('line')
+    .attr('x1', d => posLookup[d.source].x)
+    .attr('y1', d => posLookup[d.source].y)
+    .attr('x2', d => posLookup[d.source].x)
+    .attr('y2', d => posLookup[d.source].y)
+    .attr('stroke', (d, i) => 'url(#eg-' + i + ')')
+    .attr('stroke-width', d => d.weight)
+    .style('cursor', 'pointer');
+
+  // Staggered draw-in animation
+  edgeLines.transition()
+    .duration(600)
+    .delay((d, i) => 80 + i * (400 / Math.max(data.edges.length, 1)))
+    .ease(d3.easeCubicOut)
+    .attr('x2', d => posLookup[d.target].x)
+    .attr('y2', d => posLookup[d.target].y);
+
+  // Tier row labels (left margin)
+  const tierLabelGroup = g.append('g').attr('class', 'topo-tier-labels');
+  const minNodeX = Math.min(...data.nodes.map(n => n.pos.x));
+  const tierNames = { spine: 'Spines', leaf: 'Leaves', edgeLeaf: 'Edge Leaves',
+    aggLeaf: 'Agg Leaves', host: 'Hosts', ellipsis: null };
+  const labeledRanks = new Set();
+  for (const n of data.nodes) {
+    const name = tierNames[n.tier];
+    if (!name || labeledRanks.has(n.rank)) continue;
+    labeledRanks.add(n.rank);
+    tierLabelGroup.append('text')
+      .attr('x', minNodeX - 70).attr('y', n.pos.y)
+      .attr('text-anchor', 'end').attr('dy', '0.35em')
+      .attr('fill', v('--text3')).attr('font-size', 11)
+      .attr('font-weight', 600).attr('letter-spacing', '0.5px')
+      .text(name.toUpperCase());
+  }
+
+  // Link annotations between tiers (right side)
+  const annotGroup = g.append('g').attr('class', 'topo-annotations');
+  const maxNodeX = Math.max(...data.nodes.map(n => n.pos.x));
+
+  for (const link of c.links) {
+    let fromRank, toRank, labelText;
+    if (link.to === 'host') {
+      const btId = c.tiers[c.tiers.length - 1].id;
+      fromRank = c.tiers.findIndex(t => t.id === btId);
+      toRank = c.tiers.length;
+      if (isRail) {
+        labelText = '1×' + link.speed + 'G/rail';
+      } else {
+        labelText = c.hosts.linksPerNode + '×' + link.speed + 'G/node';
+      }
+    } else {
+      fromRank = c.tiers.findIndex(t => t.id === link.from);
+      toRank = c.tiers.findIndex(t => t.id === link.to);
+      const bStr = Number.isInteger(link.bundle) ? String(link.bundle) : link.bundle.toFixed(1);
+      labelText = bStr + '×' + link.speed + 'G';
+    }
+    const midY = ((fromRank + toRank) / 2) * 160;
+    const ax = maxNodeX + 110;
+
+    const ag = annotGroup.append('g')
+      .attr('transform', 'translate(' + ax + ',' + midY + ')');
+
+    const txt = ag.append('text')
+      .attr('text-anchor', 'middle').attr('dy', '0.35em')
+      .attr('fill', v('--primary')).attr('font-size', 11).attr('font-weight', 600)
+      .text(labelText);
+
+    const bx = txt.node().getBBox();
+    const pw = bx.width + 16, ph = bx.height + 10;
+    ag.insert('rect', 'text')
+      .attr('x', -pw / 2).attr('y', -ph / 2)
+      .attr('width', pw).attr('height', ph)
+      .attr('rx', ph / 2)
+      .attr('fill', v('--bg2'))
+      .attr('stroke', v('--border')).attr('stroke-width', 1);
+  }
+
+  // Draw nodes with drop shadow and fade-in
+  const nodeGroup = g.append('g').attr('class', 'topo-nodes');
+  const nodeGs = nodeGroup.selectAll('g')
+    .data(data.nodes)
+    .join('g')
+    .attr('transform', d => 'translate(' + d.pos.x + ',' + d.pos.y + ')')
+    .style('cursor', 'pointer')
+    .style('opacity', 0);
+
+  // Node fade-in animation
+  nodeGs.transition()
+    .duration(400)
+    .delay((d, i) => 50 + i * 30)
+    .ease(d3.easeCubicOut)
+    .style('opacity', 1);
+
+  // Render text first to measure, then insert rects behind
+  nodeGs.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('dy', '0.35em')
+    .attr('fill', d => nodeTextColor(d))
+    .attr('font-size', d => d.tier === 'host' || d.tier === 'ellipsis' ? 10 : 12)
+    .attr('font-weight', 700)
+    .text(d => d.label);
+
+  nodeGs.each(function(d) {
+    const textEl = d3.select(this).select('text');
+    const bx = textEl.node().getBBox();
+    const padX = 14;
+    const w = bx.width + padX * 2;
+    const h = d.tier === 'host' || d.tier === 'ellipsis' ? 28 : 34;
+    const r = d.tier === 'host' ? h / 2 : 8;
+
+    d3.select(this).insert('rect', 'text')
+      .attr('x', -w / 2).attr('y', -h / 2)
+      .attr('width', w).attr('height', h)
+      .attr('rx', r)
+      .attr('fill', nodeFillColor(d))
+      .attr('stroke', nodeStrokeColor(d))
+      .attr('stroke-width', d.tier === 'ellipsis' ? 1.5 : 2)
+      .attr('stroke-dasharray', d.tier === 'ellipsis' ? '4 3' : 'none')
+      .attr('filter', (d.tier !== 'ellipsis') ? 'url(#node-shadow)' : 'none');
+  });
+
+  // Tooltips + hover highlight/dim
+  const tooltip = document.getElementById('cy-tooltip');
+
+  function highlightNode(nodeId) {
+    const connected = adj[nodeId] || new Set();
+    nodeGs.transition().duration(200)
+      .style('opacity', d => (d.id === nodeId || connected.has(d.id)) ? 1 : 0.08);
+    edgeLines.transition().duration(200)
+      .style('opacity', d => (d.source === nodeId || d.target === nodeId) ? 1 : 0.04);
+    tierLabelGroup.transition().duration(200).style('opacity', 0.15);
+    annotGroup.transition().duration(200).style('opacity', 0.15);
+  }
+
+  function unhighlight() {
+    nodeGs.transition().duration(300).style('opacity', 1);
+    edgeLines.transition().duration(300).style('opacity', 1);
+    tierLabelGroup.transition().duration(300).style('opacity', 1);
+    annotGroup.transition().duration(300).style('opacity', 1);
+  }
+
+  nodeGs.on('mouseenter', function(event, d) {
+    if (d.tier === 'ellipsis') return;
+    highlightNode(d.id);
+    let html = '<strong>' + esc(d.label) + '</strong>';
+    if (d.platform) html += '<br>Platform: ' + esc(d.platform);
+    if (d.radix) html += '<br>Ports: ' + d.radix;
+    if (d.tier === 'host') html += '<br>' + lastTopoConfig.hosts.gpusPerNode + ' GPUs/node';
+    const conns = (adj[d.id] || new Set()).size;
+    if (conns) html += '<br>Connections: ' + conns;
+    tooltip.innerHTML = html;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (event.clientX + 15) + 'px';
+    tooltip.style.top = (event.clientY - 10) + 'px';
+  });
+
+  edgeLines.on('mouseenter', function(event, d) {
+    tooltip.innerHTML = '<strong>Link Bundle</strong><br>' + d.bundle + '× ' + d.speed + 'G';
+    tooltip.style.display = 'block';
+    tooltip.style.left = (event.clientX + 15) + 'px';
+    tooltip.style.top = (event.clientY - 10) + 'px';
+  });
+
+  svg.on('mousemove', function(event) {
+    if (tooltip.style.display === 'block') {
+      tooltip.style.left = (event.clientX + 15) + 'px';
+      tooltip.style.top = (event.clientY - 10) + 'px';
+    }
+  });
+
+  nodeGs.on('mouseleave', () => { unhighlight(); tooltip.style.display = 'none'; });
+  edgeLines.on('mouseleave', () => { tooltip.style.display = 'none'; });
+
+  // Click on background to clear any stuck highlight
+  svg.on('click', function(event) {
+    if (event.target === this || event.target === g.node()) unhighlight();
+  });
+
+  setTimeout(() => fitTopology(), 50);
+}
+
+function fitTopology() {
+  if (!d3Svg || !d3Zoom) return;
+  const g = d3Svg.select('.topo-canvas');
+  const bbox = g.node().getBBox();
+  const container = document.getElementById('cy-container');
+  const cw = container.clientWidth, ch = container.clientHeight;
+  const pad = 60;
+  const scale = Math.min(
+    (cw - pad * 2) / (bbox.width || 1),
+    (ch - pad * 2) / (bbox.height || 1),
+    1.5
+  );
+  const tx = cw / 2 - (bbox.x + bbox.width / 2) * scale;
+  const ty = ch / 2 - (bbox.y + bbox.height / 2) * scale;
+  d3Svg.transition().duration(300).call(
+    d3Zoom.transform,
+    d3.zoomIdentity.translate(tx, ty).scale(scale)
+  );
 }
 
 
