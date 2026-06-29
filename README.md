@@ -4,8 +4,8 @@ A browser-based tool for sizing AI backend network fabrics. Enter your GPU clust
 
 ## Features
 
-- **Three fabric tiers** — single-tier (collapsed spine), two-tier (leaf-spine Clos), and three-tier (hyperscale Clos)
-- **Arista platform auto-selection** — automatically picks the smallest balanced switch combination (7060X6, 7700R4, 7800R4) based on cluster size
+- **Four fabric tiers** — single-tier (collapsed spine), two-tier (leaf-spine Clos), three-tier (hyperscale Clos), and DES (Distributed Etherlink Switch)
+- **Platform suggestions** — suggests the smallest balanced switch combination based on cluster size, with Apply/Dismiss controls
 - **Full optics breakdown** — transceiver counts per tier with breakout support (1:1, 1:2, 1:4)
 - **Topology diagrams** — logical data path visualization showing switch models, port counts, and link bundles
 - **Built-in validation** — hard errors for invalid topologies and warnings for unbalanced fabrics, with minimum platform suggestions
@@ -14,11 +14,33 @@ A browser-based tool for sizing AI backend network fabrics. Enter your GPU clust
 
 ## Supported Arista Platforms
 
+### Standard Leaf-Spine (Tiers 1–3)
+
+Traditional Clos topologies using independent switches interconnected with standard Ethernet links.
+
 | Platform | Ports | Type |
 |----------|-------|------|
 | 7060X6 | 32 / 64 | Fixed 800G |
-| 7700R4 | 38 / 128 | Fixed 800G |
 | 7800R4 | 144 / 288 / 432 / 576 | Chassis (4/8/12/16-slot × 36-port line cards) |
+
+Use standard platforms when you need flexible topology design, custom oversubscription ratios, or clusters that don't fit the DES constraints.
+
+### DES — Distributed Etherlink Switch (Tier 4)
+
+The 7700R4 DES is a cell-based, VOQ-scheduled fabric that presents as a single non-blocking logical switch. It uses fixed-function leaf and spine modules rather than independent switches.
+
+| Component | SKU | Ports |
+|-----------|-----|-------|
+| Leaf | DCS-DL-7700R4 | 18 Ethernet OSFP (host-facing) + 20 fabric OSFP |
+| Spine | DCS-DS-7720R4 | 128 fabric-only OSFP |
+
+**Key constraints:**
+- One-stage max: 128 leaves, 40 spines per pod
+- Host breakout: 1×800G or 2×400G per Ethernet port (no 4-way breakout)
+- Always non-blocking (1:1 subscription) — no oversubscription tuning
+- Max ~4,608 host ports per plane (128 leaves × 18 ports × 2 breakout)
+
+**When to use DES:** Best for mid-size AI clusters (up to ~4,600 GPUs per plane) that benefit from a simplified, non-blocking fabric without traditional leaf-spine topology planning. The cell-based architecture eliminates oversubscription decisions and provides deterministic latency.
 
 ## Usage
 
@@ -29,7 +51,7 @@ Open `index.html` in any modern browser. No build step, no dependencies, no serv
 3. Adjust switch configuration (planes, downlink:uplink ratio, breakout)
 4. Click **Calculate Network Requirements**
 
-The tool auto-selects the optimal switch platforms. Override manually via the dropdowns or select "Other (custom)" for arbitrary port counts.
+The tool suggests optimal switch platforms based on your inputs. Apply the suggestion or choose manually via the dropdowns. Select "Other (custom)" for arbitrary port counts. When DES is selected, switch configuration is automatic — leaf/spine selectors are hidden.
 
 ## Configuration Options
 
@@ -38,7 +60,7 @@ The tool auto-selects the optimal switch platforms. Override manually via the dr
 | Total GPUs / Nodes | Cluster size — syncs bidirectionally |
 | GPUs per node | Typically 8 for modern GPU servers |
 | Links per GPU | Backend NIC links (1 standard, 2 for dual-rail) |
-| Fabric tier | Single, two, or three-tier Clos topology |
+| Fabric tier | Single, two-tier, three-tier Clos, or DES |
 | Leaf / Spine switch | Arista platform or custom port count |
 | Planes | Redundant parallel fabrics (1–8) |
 | Downlink:Uplink ratio | Port allocation ratio (1 = non-blocking, <1 = more uplinks) |
