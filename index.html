@@ -2324,7 +2324,10 @@ function buildMRCTopoData() {
       }
     }
   }
-  nodes.forEach(n => { if (realConns[n.id]) n.realConns = realConns[n.id]; });
+  nodes.forEach(n => {
+    if (realConns[n.id]) n.realConns = realConns[n.id];
+    if (n.tier === 'host') n.realConns = c.hosts.linksPerNode;
+  });
 
   // Cross-plane host edges: each host connects to one leaf in each plane
   const hostLink = c.links.find(l => l.to === 'host');
@@ -2460,7 +2463,10 @@ function buildTopoData() {
       }
     }
   }
-  nodes.forEach(n => { if (realConns[n.id]) n.realConns = realConns[n.id]; });
+  nodes.forEach(n => {
+    if (realConns[n.id]) n.realConns = realConns[n.id];
+    if (n.tier === 'host') n.realConns = c.hosts.linksPerNode;
+  });
 
   for (const link of c.links) {
     if (link.to === 'host') {
