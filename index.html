@@ -988,6 +988,7 @@ function clearResults() {
 
 function resetInputs() {
   document.getElementById('total-gpus').value = '';
+  document.getElementById('num-nodes').value = '';
   document.getElementById('gpus-per-node').value = 8;
   document.getElementById('links-per-gpu').value = 1;
   document.querySelector('input[name=tier][value="2"]').checked = true;
