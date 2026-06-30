@@ -1,0 +1,64 @@
+name: Bug Report
+description: Report a calculation error, rendering issue, or unexpected behavior
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a bug!
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: e.g. "The optics count shows 0 for spine uplinks when using 7800R4 with 3-tier Clos"
+    validations:
+      required: true
+  - type: textarea
+    id: inputs
+    attributes:
+      label: Calculator inputs
+      description: What values did you enter? Include GPU count, tier, platforms, planes, speeds, breakout, etc.
+      placeholder: |
+        - GPUs: 512
+        - GPUs per node: 8
+        - Tier: Two-tier Clos
+        - Leaf: 7060X6 (64-port)
+        - Spine: 7060X6 (64-port)
+        - Planes: 1
+        - Host speed: 800G
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain the problem.
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: theme
+    attributes:
+      label: Theme
+      options:
+        - Light
+        - Dark
+        - System default
+    validations:
+      required: false
