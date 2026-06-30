@@ -1484,7 +1484,9 @@ function calculate() {
   let totalSpine = 0, totalLeaf = 0;
 
   const linksPerNode = gpusPerNode * linksPerGpu;
-  const hostLinkStr = `${linksPerNode}× ${hostSpeed}G links` + (breakout > 1 ? ` (into ${linksPerNode/breakout}× switch ports)` : '');
+  const nicBreakout = planes > 1 && linksPerGpu < planes;
+  const linksPerNodePerPlane = nicBreakout ? linksPerNode : (planes > 1 ? Math.ceil(linksPerNode / planes) : linksPerNode);
+  const hostLinkStr = `${linksPerNodePerPlane}× ${hostSpeedPerPlane}G links` + (breakout > 1 ? ` (into ${linksPerNodePerPlane/breakout}× switch ports)` : '');
   const diagTitle = 'Logical Data Path (Single Node Slice' + (planes > 1 ? ` · ${planes} Planes` : '') + ')';
 
   function buildDiagram(nodes, planes) {
@@ -1627,8 +1629,8 @@ function calculate() {
 
     lastTopoConfig = { tier: 1, planes, title: diagTitle,
       tiers: [{ id: 'spine', label: spinePlatform.name, perPlane: 1, radix: spineRadix }],
-      hosts: { perLeaf: linksPerPlane, linksPerNode, gpusPerNode },
-      links: [{ from: 'spine', to: 'host', bundle: linksPerNode, speed: hostSpeed }] };
+      hosts: { perLeaf: linksPerPlane, linksPerNode, linksPerNodePerPlane, gpusPerNode },
+      links: [{ from: 'spine', to: 'host', bundle: linksPerNodePerPlane, speed: hostSpeedPerPlane }] };
 
     const hOptSwitchBase = Math.ceil(totalHostLinks / breakout);
     const hOptHostBase   = totalHostLinks;
@@ -1737,10 +1739,10 @@ function calculate() {
         { id: 'spine', label: spinePlatform.name, perPlane: spinePerPlane, radix: spineRadix },
         { id: 'leaf', label: leafPlatform.name, perPlane: leafPerPlane, radix: leafRadix }
       ],
-      hosts: { perLeaf: Math.ceil(linksPerPlane / leafPerPlane), linksPerNode, gpusPerNode },
+      hosts: { perLeaf: Math.ceil(linksPerPlane / leafPerPlane), linksPerNode, linksPerNodePerPlane, gpusPerNode },
       links: [
         { from: 'spine', to: 'leaf', bundle: bundleSize, speed: spineSpeed },
-        { from: 'leaf', to: 'host', bundle: linksPerNode, speed: hostSpeed }
+        { from: 'leaf', to: 'host', bundle: linksPerNodePerPlane, speed: hostSpeedPerPlane }
       ] };
 
   } else if (tierNum === 3) {
@@ -1881,11 +1883,11 @@ function calculate() {
         { id: 'aggLeaf', label: leafPlatform.name, perPlane: leaf1PerPlane, radix: leafRadix },
         { id: 'edgeLeaf', label: leafPlatform.name, perPlane: leaf2PerPlane, radix: leafRadix }
       ],
-      hosts: { perLeaf: Math.ceil(linksPerPlane / leaf2PerPlane), linksPerNode, gpusPerNode },
+      hosts: { perLeaf: Math.ceil(linksPerPlane / leaf2PerPlane), linksPerNode, linksPerNodePerPlane, gpusPerNode },
       links: [
         { from: 'spine', to: 'aggLeaf', bundle: a2sBundle, speed: spineSpeed },
         { from: 'aggLeaf', to: 'edgeLeaf', bundle: e2aBundle, speed: spineSpeed },
-        { from: 'edgeLeaf', to: 'host', bundle: linksPerNode, speed: hostSpeed }
+        { from: 'edgeLeaf', to: 'host', bundle: linksPerNodePerPlane, speed: hostSpeedPerPlane }
       ] };
   }
 
@@ -1961,10 +1963,10 @@ function calculate() {
         { id: 'spine', label: 'DCS-DS-7720R4', perPlane: desSpinePerPlane, radix: 128 },
         { id: 'leaf', label: 'DCS-DL-7700R4', perPlane: desLeafPerPlane, radix: 18 }
       ],
-      hosts: { perLeaf: portsUsedPerLeaf * breakout, linksPerNode, gpusPerNode },
+      hosts: { perLeaf: portsUsedPerLeaf * breakout, linksPerNode, linksPerNodePerPlane, gpusPerNode },
       links: [
         { from: 'spine', to: 'leaf', bundle: fabricLinksPerPair, speed: 800 },
-        { from: 'leaf', to: 'host', bundle: linksPerNode, speed: hostSpeed }
+        { from: 'leaf', to: 'host', bundle: linksPerNodePerPlane, speed: hostSpeedPerPlane }
       ] };
   }
 
@@ -2225,7 +2227,7 @@ function buildMRCTopoData() {
   const planeCount = c.planes;
   const GAP_X = 120, GAP_Y = 160, PLANE_GAP = 140;
 
-  const linksPerNodePerPlane = Math.ceil(c.hosts.linksPerNode / planeCount);
+  const linksPerNodePerPlane = c.hosts.linksPerNodePerPlane || Math.ceil(c.hosts.linksPerNode / planeCount);
   const hostCountPerLeaf = Math.ceil(c.hosts.perLeaf / linksPerNodePerPlane);
   const bottomTier = c.tiers[c.tiers.length - 1];
 
@@ -2532,9 +2534,9 @@ function buildTopoData() {
           const leafIdx = leafIdxs[hi % leafIdxs.length];
           edges.push({
             source: link.from + '-' + leafIdx, target: realHosts[hi].id,
-            label: c.hosts.linksPerNode + '×' + link.speed + 'G',
-            weight: Math.min(Math.max(1, c.hosts.linksPerNode / 2), 4),
-            bundle: c.hosts.linksPerNode, speed: link.speed
+            label: link.bundle + '×' + link.speed + 'G',
+            weight: Math.min(Math.max(1, link.bundle / 2), 4),
+            bundle: link.bundle, speed: link.speed
           });
         }
       }
@@ -2799,10 +2801,10 @@ function renderTopology() {
       if (isRail) {
         labelText = '1×' + link.speed + 'G/rail';
       } else if (isMRC) {
-        const lppn = Math.ceil(c.hosts.linksPerNode / c.planes);
+        const lppn = c.hosts.linksPerNodePerPlane || Math.ceil(c.hosts.linksPerNode / c.planes);
         labelText = lppn + '×' + link.speed + 'G/plane';
       } else {
-        labelText = c.hosts.linksPerNode + '×' + link.speed + 'G/node';
+        labelText = link.bundle + '×' + link.speed + 'G/node';
       }
     } else {
       fromRank = c.tiers.findIndex(t => t.id === link.from);
