@@ -2558,13 +2558,24 @@ function buildTopoData() {
       if (isRail) {
         const leafIdxs = tierRealIdx[link.from] || [];
         const hostNodes = nodes.filter(n => n.tier === 'host');
+        const totalLeaves = tierCounts[link.from];
+        const gpus = c.hosts.gpusPerNode || 8;
+        const leavesPerRail = Math.max(1, totalLeaves / gpus);
+        const totalHosts = Math.round(totalLeaves * c.hosts.perLeaf / c.hosts.linksPerNode);
+        const nodesPerGroup = Math.ceil(totalHosts / leavesPerRail);
         for (const hn of hostNodes) {
+          const hi = parseInt(hn.label.replace(/\D+/g, '')) - 1 || 0;
+          const leafGroup = Math.floor(hi / nodesPerGroup);
+          const groupStart = leafGroup * gpus;
+          const groupEnd = groupStart + gpus;
           for (const t of leafIdxs) {
-            edges.push({
-              source: link.from + '-' + t, target: hn.id,
-              label: '1×' + link.speed + 'G',
-              weight: 1, bundle: 1, speed: link.speed
-            });
+            if (t >= groupStart && t < groupEnd) {
+              edges.push({
+                source: link.from + '-' + t, target: hn.id,
+                label: '1×' + link.speed + 'G',
+                weight: 1, bundle: 1, speed: link.speed
+              });
+            }
           }
         }
       } else {
@@ -2944,9 +2955,8 @@ function renderTopology() {
     if (!expandedHostId) return;
     const prevId = expandedHostId;
     expandedHostId = null;
-    nodeGs.filter(d => d.id === prevId).transition().duration(instant ? 0 : 250).style('opacity', 1);
-    edgeLines.filter(e => e.target === prevId || e.source === prevId)
-      .transition().duration(instant ? 0 : 300).style('opacity', 1);
+    nodeGs.transition().duration(instant ? 0 : 250).style('opacity', 1);
+    edgeLines.transition().duration(instant ? 0 : 300).style('opacity', 1);
     if (nicOverlayGroup) {
       const grp = nicOverlayGroup;
       const edgeLyr = grp._edgeLayer;
@@ -2964,7 +2974,7 @@ function renderTopology() {
           if (edgeLyr) edgeLyr.selectAll('.nic-edge')
             .transition().duration(200)
             .style('opacity', 0);
-          grp.selectAll('.nic-label')
+          grp.selectAll('.nic-label, .nic-temp-leaf')
             .transition().duration(200)
             .style('opacity', 0);
           setTimeout(() => { grp.remove(); if (edgeLyr) edgeLyr.remove(); }, 300);
@@ -3016,6 +3026,60 @@ function renderTopology() {
     nicOverlayGroup = g.append('g').attr('class', 'nic-overlay');
     nicOverlayGroup._edgeLayer = nicEdgeLayer;
 
+    // Rail mode: create gpusPerNode temp leaf nodes, hide existing leaves
+    let railLeafPositions = null;
+    if (isRailView) {
+      const bottomTier = c.tiers[c.tiers.length - 1];
+      const leafNodes = data.nodes.filter(n => n.tier === bottomTier.id || (n.tier === 'ellipsis' && n.id.startsWith(bottomTier.id)));
+      const leafY = leafNodes.length > 0 ? leafNodes[0].pos.y : hostPos.y - 160;
+
+      // Hide existing leaf nodes and their edges
+      nodeGs.filter(nd => leafNodes.some(ln => ln.id === nd.id))
+        .transition().duration(200).style('opacity', 0);
+      edgeLines.filter(e => leafNodes.some(ln => ln.id === e.source || ln.id === e.target))
+        .transition().duration(200).style('opacity', 0);
+
+      railLeafPositions = [];
+      const leafSpacing = 140;
+      const totalRailWidth = (gpus - 1) * leafSpacing;
+      const railStartX = hostPos.x - totalRailWidth / 2;
+      const totalLeaves = bottomTier.perPlane;
+      const totalNodes = Math.round(totalLeaves * h.perLeaf / h.linksPerNode);
+      const leavesPerRail = Math.max(1, totalLeaves / gpus);
+      const nodesPerGroup = Math.ceil(totalNodes / leavesPerRail);
+      const hostIdx = parseInt(d.label.replace(/\D+/g, '')) - 1 || 0;
+      const leafGroup = Math.floor(hostIdx / nodesPerGroup);
+      const startLeaf = leafGroup * gpus;
+
+      for (let gi = 0; gi < gpus; gi++) {
+        const realLeafIdx = startLeaf + gi;
+        const lx = railStartX + gi * leafSpacing;
+        const ly = leafY;
+        railLeafPositions.push({ idx: realLeafIdx, pos: { x: lx, y: ly } });
+        const color = RAIL_COLORS[gi % RAIL_COLORS.length];
+        const label = bottomTier.label + ' ' + (realLeafIdx + 1);
+        const tempG = nicOverlayGroup.append('g')
+          .attr('class', 'nic-temp-leaf')
+          .attr('transform', 'translate(' + lx + ',' + ly + ')')
+          .style('opacity', 0);
+        const tempText = tempG.append('text')
+          .attr('text-anchor', 'middle').attr('dy', '0.35em')
+          .attr('fill', isDark ? tintColor(color, 0.35) : shadeColor(color, 0.25))
+          .attr('font-size', 12).attr('font-weight', 700)
+          .text(label);
+        const bx = tempText.node().getBBox();
+        const pw = bx.width + 28, ph = 34;
+        tempG.insert('rect', 'text')
+          .attr('x', -pw / 2).attr('y', -ph / 2)
+          .attr('width', pw).attr('height', ph).attr('rx', 8)
+          .attr('fill', isDark ? shadeColor(color, 0.65) : tintColor(color, 0.82))
+          .attr('stroke', isDark ? tintColor(color, 0.15) : shadeColor(color, 0.1))
+          .attr('stroke-width', 2)
+          .attr('filter', 'url(#node-shadow)');
+        tempG.transition().duration(350).ease(d3.easeCubicOut).style('opacity', 1);
+      }
+    }
+
     const nics = [];
     for (let gi = 0; gi < gpus; gi++) {
       const nicPlanes = [];
@@ -3033,13 +3097,10 @@ function renderTopology() {
 
     nics.forEach(nic => {
       if (isRailView) {
-        const edge = railEdges[nic.idx % railEdges.length];
-        if (!edge) return;
-        const leafId = edge.source === d.id ? edge.target : edge.source;
-        const leafPos = posLookup[leafId];
-        if (!leafPos) return;
-        const leafIdx = parseInt(leafId.split('-').pop()) || nic.idx;
-        const color = RAIL_COLORS[leafIdx % RAIL_COLORS.length];
+        const rlp = railLeafPositions[nic.idx];
+        if (!rlp) return;
+        const leafPos = rlp.pos;
+        const color = RAIL_COLORS[rlp.idx % RAIL_COLORS.length];
 
         nicEdgeLayer.append('line')
           .attr('class', 'nic-edge')
@@ -3086,11 +3147,8 @@ function renderTopology() {
     nicGs.append('circle')
       .attr('r', 10)
       .attr('fill', nd => {
-        if (isRailView && railEdges.length > 0) {
-          const re = railEdges[nd.idx % railEdges.length];
-          const lId = re.source === d.id ? re.target : re.source;
-          const li = parseInt(lId.split('-').pop()) || nd.idx;
-          const rc = RAIL_COLORS[li % RAIL_COLORS.length];
+        if (isRailView && railLeafPositions) {
+          const rc = RAIL_COLORS[nd.idx % RAIL_COLORS.length];
           return isDark ? shadeColor(rc, 0.55) : tintColor(rc, 0.75);
         }
         if (isMRC && pl > 1 && nd.planes.length === 1) {
@@ -3101,12 +3159,8 @@ function renderTopology() {
         return v('--bg3');
       })
       .attr('stroke', nd => {
-        if (isRailView && railEdges.length > 0) {
-          const re = railEdges[nd.idx % railEdges.length];
-          const lId = re.source === d.id ? re.target : re.source;
-          const li = parseInt(lId.split('-').pop()) || nd.idx;
-          return RAIL_COLORS[li % RAIL_COLORS.length];
-        }
+        if (isRailView && railLeafPositions)
+          return RAIL_COLORS[nd.idx % RAIL_COLORS.length];
         if (isMRC && pl > 1 && nd.planes.length === 1)
           return RAIL_COLORS[nd.planes[0] % RAIL_COLORS.length];
         return v('--border');
