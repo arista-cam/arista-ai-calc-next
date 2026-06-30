@@ -867,6 +867,7 @@
       <button class="topo-btn" onclick="fitTopology()" title="Fit to view">Fit</button>
       <button class="topo-btn" onclick="closeTopoModal()" title="Close">&#x2715;</button>
     </div>
+    <div style="padding:4px 16px;font-size:11px;opacity:0.5;color:var(--text2)">Hover nodes for details · Click a compute node to expand GPU/NIC connections · Scroll to zoom · Drag to pan</div>
     <div id="cy-container"></div>
   </div>
 </div>
@@ -2962,6 +2963,15 @@ function renderTopology() {
     const nicStartX = hostPos.x - nicRowWidth / 2;
 
     const hostEdges = data.edges.filter(e => e.target === d.id || e.source === d.id);
+    const isRailView = currentTopoType === 'rail';
+
+    const railEdges = isRailView
+      ? [...hostEdges].sort((a, b) => {
+          const aId = a.source === d.id ? a.target : a.source;
+          const bId = b.source === d.id ? b.target : b.source;
+          return (parseInt(aId.split('-').pop()) || 0) - (parseInt(bId.split('-').pop()) || 0);
+        })
+      : null;
 
     highlightNode(d.id);
     nodeGs.filter(nd => nd.id === d.id).transition().duration(200).style('opacity', 0.25);
@@ -2975,28 +2985,28 @@ function renderTopology() {
 
     const nics = [];
     for (let gi = 0; gi < gpus; gi++) {
-      const planes = [];
-      if (pl <= 1) {
-        planes.push(0);
+      const nicPlanes = [];
+      if (isRailView) {
+        nicPlanes.push(gi);
+      } else if (pl <= 1) {
+        nicPlanes.push(0);
       } else if (isBreakout || lpg >= pl) {
-        for (let p = 0; p < pl; p++) planes.push(p);
+        for (let p = 0; p < pl; p++) nicPlanes.push(p);
       } else {
-        for (let l = 0; l < lpg; l++) planes.push((gi * lpg + l) % pl);
+        for (let l = 0; l < lpg; l++) nicPlanes.push((gi * lpg + l) % pl);
       }
-      nics.push({ idx: gi, pos: { x: nicStartX + gi * nicSpacing, y: nicY }, planes });
+      nics.push({ idx: gi, pos: { x: nicStartX + gi * nicSpacing, y: nicY }, planes: nicPlanes, railIdx: isRailView ? gi : -1 });
     }
 
     nics.forEach(nic => {
-      nic.planes.forEach(planeIdx => {
-        const edge = hostEdges.find(e => e.plane === planeIdx) || hostEdges[0];
+      if (isRailView) {
+        const edge = railEdges[nic.idx % railEdges.length];
         if (!edge) return;
         const leafId = edge.source === d.id ? edge.target : edge.source;
         const leafPos = posLookup[leafId];
         if (!leafPos) return;
-
-        const color = isMRC && pl > 1
-          ? RAIL_COLORS[planeIdx % RAIL_COLORS.length]
-          : (isDark ? '#888' : '#999');
+        const leafIdx = parseInt(leafId.split('-').pop()) || nic.idx;
+        const color = RAIL_COLORS[leafIdx % RAIL_COLORS.length];
 
         nicEdgeLayer.append('line')
           .attr('class', 'nic-edge')
@@ -3008,7 +3018,30 @@ function renderTopology() {
           .transition().duration(350).delay(50).ease(d3.easeCubicOut)
           .attr('x2', leafPos.x).attr('y2', leafPos.y)
           .attr('stroke-opacity', 0.55);
-      });
+      } else {
+        nic.planes.forEach(planeIdx => {
+          const edge = hostEdges.find(e => e.plane === planeIdx) || hostEdges[0];
+          if (!edge) return;
+          const leafId = edge.source === d.id ? edge.target : edge.source;
+          const leafPos = posLookup[leafId];
+          if (!leafPos) return;
+
+          const color = isMRC && pl > 1
+            ? RAIL_COLORS[planeIdx % RAIL_COLORS.length]
+            : (isDark ? '#888' : '#999');
+
+          nicEdgeLayer.append('line')
+            .attr('class', 'nic-edge')
+            .attr('x1', nic.pos.x).attr('y1', nic.pos.y)
+            .attr('x2', nic.pos.x).attr('y2', nic.pos.y)
+            .attr('stroke', color)
+            .attr('stroke-width', 1.5)
+            .attr('stroke-opacity', 0)
+            .transition().duration(350).delay(50).ease(d3.easeCubicOut)
+            .attr('x2', leafPos.x).attr('y2', leafPos.y)
+            .attr('stroke-opacity', 0.55);
+        });
+      }
     });
 
     const nicGs = nicOverlayGroup.selectAll('g.nic-node')
@@ -3020,6 +3053,13 @@ function renderTopology() {
     nicGs.append('circle')
       .attr('r', 10)
       .attr('fill', nd => {
+        if (isRailView && railEdges.length > 0) {
+          const re = railEdges[nd.idx % railEdges.length];
+          const lId = re.source === d.id ? re.target : re.source;
+          const li = parseInt(lId.split('-').pop()) || nd.idx;
+          const rc = RAIL_COLORS[li % RAIL_COLORS.length];
+          return isDark ? shadeColor(rc, 0.55) : tintColor(rc, 0.75);
+        }
         if (isMRC && pl > 1 && nd.planes.length === 1) {
           return isDark
             ? shadeColor(RAIL_COLORS[nd.planes[0] % RAIL_COLORS.length], 0.55)
@@ -3028,6 +3068,12 @@ function renderTopology() {
         return v('--bg3');
       })
       .attr('stroke', nd => {
+        if (isRailView && railEdges.length > 0) {
+          const re = railEdges[nd.idx % railEdges.length];
+          const lId = re.source === d.id ? re.target : re.source;
+          const li = parseInt(lId.split('-').pop()) || nd.idx;
+          return RAIL_COLORS[li % RAIL_COLORS.length];
+        }
         if (isMRC && pl > 1 && nd.planes.length === 1)
           return RAIL_COLORS[nd.planes[0] % RAIL_COLORS.length];
         return v('--border');
@@ -3053,9 +3099,11 @@ function renderTopology() {
       .attr('fill', v('--text2'))
       .attr('font-size', 9).attr('font-weight', 600)
       .style('opacity', 0)
-      .text(pl > 1
-        ? (isBreakout ? 1 : Math.ceil(lpg / pl)) + '× ' + speedLabel + ' link per plane'
-        : lpg + '× ' + speedLabel + ' NIC per GPU')
+      .text(isRailView
+        ? lpg + '× ' + speedLabel + ' link per rail'
+        : (pl > 1
+          ? (isBreakout ? 1 : Math.ceil(lpg / pl)) + '× ' + speedLabel + ' link per plane'
+          : lpg + '× ' + speedLabel + ' NIC per GPU'))
       .transition().duration(350).style('opacity', 1);
 
     nicOverlayGroup.append('text')
