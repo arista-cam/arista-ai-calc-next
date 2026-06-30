@@ -1331,8 +1331,14 @@ function opticType(speed) {
 function opticTypeLPO(speed) {
   return { 100: 'QSFP28 100G SR4', 200: 'QSFP56 200G SR4', 400: 'QSFP-DD LPO-400G DR4', 800: 'OSFP LPO-800G-2DR4' }[speed] || speed + 'G';
 }
+function opticTypeDR(speed) {
+  return { 100: 'QSFP28 100G SR4', 200: 'QSFP56 200G SR4', 400: 'QSFP-DD 400G DR4', 800: 'OSFP 800G 2DR4' }[speed] || speed + 'G';
+}
 function dualOptic(speed) {
   return '<span class="optic-conv">' + opticType(speed) + '</span><span class="optic-lpo">' + opticTypeLPO(speed) + '</span>';
+}
+function dualOpticHost(speed) {
+  return '<span class="optic-conv">' + opticType(speed) + '</span><span class="optic-lpo">' + opticTypeDR(speed) + '</span>';
 }
 
 function toggleOpticMode(mode) {
@@ -1627,10 +1633,10 @@ function calculate() {
     } else {
       optRows.push(['In spine switch (' + breakout + ':1 breakout)', fmtN(hOptSwitchBase)]);
     }
-    optRows.push(['In host NIC · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+    optRows.push(['In host NIC · ' + dualOpticHost(hostSpeed), fmtN(hOptHostBase)]);
     optRows.push(['Total optics', fmtN(hostOptBase), true]);
 
-    optHtml = opticsSection(optRows, '<span class="optic-conv">' + opticType(hostSpeed) + '. Reach: ~100m (multimode).</span><span class="optic-lpo">Switch-side: ' + opticTypeLPO(hostSpeed) + ', host NIC: ' + opticType(hostSpeed) + '. LPO reach: ~500m (single-mode).</span>');
+    optHtml = opticsSection(optRows, '<span class="optic-conv">' + opticType(hostSpeed) + '. Reach: ~100m (multimode).</span><span class="optic-lpo">Switch-side: ' + opticTypeLPO(hostSpeed) + ', host NIC: ' + opticTypeDR(hostSpeed) + '. LPO reach: ~500m (single-mode).</span>');
 
   } else if (tierNum === 2) {
     const leafPerPlane  = Math.ceil(linksPerPlane / effDownlinks);
@@ -1701,11 +1707,11 @@ function calculate() {
     } else {
       optRows.push(['In leaf switch (' + breakout + ':1 breakout)', fmtN(hOptSwitchBase)]);
     }
-    optRows.push(['In host NIC · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+    optRows.push(['In host NIC · ' + dualOpticHost(hostSpeed), fmtN(hOptHostBase)]);
     optRows.push(['Host-tier subtotal', fmtN(hOptBase), true]);
     optRows.push(['Grand total optics', fmtN(spOptBase + hOptBase), true]);
 
-    optHtml = opticsSection(optRows, '<span class="optic-conv">Spine: ' + opticType(spineSpeed) + ' · Host: ' + opticType(hostSpeed) + '. Reach: ~100m (multimode).</span><span class="optic-lpo">Spine: ' + opticTypeLPO(spineSpeed) + '. Leaf switch: ' + opticTypeLPO(hostSpeed) + ', host NIC: ' + opticType(hostSpeed) + '. LPO reach: ~500m (single-mode).</span>');
+    optHtml = opticsSection(optRows, '<span class="optic-conv">Spine: ' + opticType(spineSpeed) + ' · Host: ' + opticType(hostSpeed) + '. Reach: ~100m (multimode).</span><span class="optic-lpo">Spine: ' + opticTypeLPO(spineSpeed) + '. Leaf switch: ' + opticTypeLPO(hostSpeed) + ', host NIC: ' + opticTypeDR(hostSpeed) + '. LPO reach: ~500m (single-mode).</span>');
 
     const uplinksStr = `${Number.isInteger(bundleSize) ? bundleSize : bundleSize.toFixed(1)}× ${spineSpeed}G uplinks`;
     diagramHtml = diagHeader + buildDiagram([
@@ -1838,11 +1844,11 @@ function calculate() {
     } else {
       optRows.push(['In edge leaf (' + breakout + ':1 breakout)', fmtN(hOptSwitchBase)]);
     }
-    optRows.push(['In host NIC · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+    optRows.push(['In host NIC · ' + dualOpticHost(hostSpeed), fmtN(hOptHostBase)]);
     optRows.push(['Host-tier subtotal', fmtN(hBase), true]);
     optRows.push(['Grand total optics', fmtN(a2sBase + e2aBase + hBase), true]);
 
-    optHtml = opticsSection(optRows, '<span class="optic-conv">Spine/agg: ' + opticType(spineSpeed) + ' · Host: ' + opticType(hostSpeed) + '. Reach: ~100m (multimode).</span><span class="optic-lpo">Spine/agg: ' + opticTypeLPO(spineSpeed) + '. Edge leaf: ' + opticTypeLPO(hostSpeed) + ', host NIC: ' + opticType(hostSpeed) + '. LPO reach: ~500m (single-mode).</span>');
+    optHtml = opticsSection(optRows, '<span class="optic-conv">Spine/agg: ' + opticType(spineSpeed) + ' · Host: ' + opticType(hostSpeed) + '. Reach: ~100m (multimode).</span><span class="optic-lpo">Spine/agg: ' + opticTypeLPO(spineSpeed) + '. Edge leaf: ' + opticTypeLPO(hostSpeed) + ', host NIC: ' + opticTypeDR(hostSpeed) + '. LPO reach: ~500m (single-mode).</span>');
 
     const e2aStr = `${Number.isInteger(e2aBundle) ? e2aBundle : e2aBundle.toFixed(1)}× ${spineSpeed}G links`;
     const a2sStr = `${Number.isInteger(a2sBundle) ? a2sBundle : a2sBundle.toFixed(1)}× ${spineSpeed}G links`;
@@ -1918,13 +1924,13 @@ function calculate() {
     } else {
       optRows.push(['In DES leaf (' + breakout + ':1 breakout)', fmtN(hOptSwitchBase)]);
     }
-    optRows.push(['In host NIC · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+    optRows.push(['In host NIC · ' + dualOpticHost(hostSpeed), fmtN(hOptHostBase)]);
     optRows.push(['Host optics subtotal', fmtN(hOptSwitchBase + hOptHostBase), true]);
     optRows.push(['Leaf ↔ spine fabric links', fmtN(totalLeaf * DES_FABRIC_PORTS), false, true]);
     optRows.push(['Leaf ↔ spine fabric optics (×2) · <span class="optic-conv">OSFP 800G</span><span class="optic-lpo">OSFP LPO-800G-2DR4</span>', fmtN(fabricOpticsTotal)]);
     optRows.push(['Grand total optics', fmtN(hOptSwitchBase + hOptHostBase + fabricOpticsTotal), true]);
 
-    optHtml = opticsSection(optRows, '<span class="optic-conv">Host: ' + opticType(hostSpeed) + ' · Fabric: OSFP 800G. Reach: ~100m (multimode).</span><span class="optic-lpo">Fabric: OSFP LPO-800G-2DR4. DES leaf: ' + opticTypeLPO(hostSpeed) + ', host NIC: ' + opticType(hostSpeed) + '. LPO reach: ~500m (single-mode).</span>');
+    optHtml = opticsSection(optRows, '<span class="optic-conv">Host: ' + opticType(hostSpeed) + ' · Fabric: OSFP 800G. Reach: ~100m (multimode).</span><span class="optic-lpo">Fabric: OSFP LPO-800G-2DR4. DES leaf: ' + opticTypeLPO(hostSpeed) + ', host NIC: ' + opticTypeDR(hostSpeed) + '. LPO reach: ~500m (single-mode).</span>');
 
     const fabricStr = DES_FABRIC_PORTS + '× 800G fabric links';
     diagramHtml = diagHeader + buildDiagram([
