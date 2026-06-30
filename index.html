@@ -934,8 +934,8 @@ const DES_POWER = {
 };
 
 const PLATFORMS = [
-  { name: '7060X6',        radix: 32,  type: 'fixed',   desc: '7060X6 (32-port)',  powerTyp: 320, powerMax: 1100 },
-  { name: '7060X6',        radix: 64,  type: 'fixed',   desc: '7060X6 (64-port)',  powerTyp: 640, powerMax: 2218 },
+  { name: '7060X6',        radix: 32,  type: 'fixed',   desc: '7060X6 (32-port)',  powerTyp: 320, powerMax: 600 },
+  { name: '7060X6',        radix: 64,  type: 'fixed',   desc: '7060X6 (64-port)',  powerTyp: 640, powerMax: 1194 },
   { name: '7800R4 4-slot', radix: 144, type: 'chassis', desc: '7800R4 4-slot (144-port)',  slots: 4,  portsPerSlot: 36, powerTyp: 4500, powerMax: 6801 },
   { name: '7800R4 8-slot', radix: 288, type: 'chassis', desc: '7800R4 8-slot (288-port)',  slots: 8,  portsPerSlot: 36, powerTyp: 9000, powerMax: 14139 },
   { name: '7800R4 12-slot',radix: 432, type: 'chassis', desc: '7800R4 12-slot (432-port)', slots: 12, portsPerSlot: 36, powerTyp: 13500, powerMax: 22394 },
@@ -2111,7 +2111,7 @@ function calculate() {
   }
 
   powerHtml += '</table>';
-  powerHtml += '<div class="note-box">Switch power: typical at 25°C/50% load, 80% and max at 40°C/100% load. Source: Arista platform datasheets.</div>';
+  powerHtml += '<div class="note-box">Power figures are estimates based on Arista platform datasheets. Switch power: typical at 25°C/50% load, max at 40°C/100% load (excluding optics). Actual consumption varies with configuration and environment.</div>';
   powerHtml += '</div>';
 
   out += switchHtml + optHtml + powerHtml;
