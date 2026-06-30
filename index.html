@@ -2300,6 +2300,32 @@ function buildMRCTopoData() {
     nodes.push({ id: 'host-' + (totalHosts - 1), label: 'Node ' + totalHosts, tier: 'host', rank: hostRank, plane: -1, pos: { x: hostSx + 4 * GAP_X, y: hostRank * GAP_Y } });
   }
 
+  // Compute real connection counts per node
+  const realConns = {};
+  for (const link of c.links) {
+    if (link.to === 'host') {
+      for (let p = 0; p < planeCount; p++) {
+        const leafKey = p + '-' + link.from;
+        for (const idx of (realIndices[leafKey] || [])) {
+          const nid = 'p' + p + '-' + link.from + '-' + idx;
+          realConns[nid] = (realConns[nid] || 0) + hostCountPerLeaf;
+        }
+      }
+    } else {
+      const fromCount = c.tiers.find(t => t.id === link.from)?.perPlane || 0;
+      const toCount = c.tiers.find(t => t.id === link.to)?.perPlane || 0;
+      for (let p = 0; p < planeCount; p++) {
+        for (const idx of (realIndices[p + '-' + link.from] || [])) {
+          realConns['p' + p + '-' + link.from + '-' + idx] = (realConns['p' + p + '-' + link.from + '-' + idx] || 0) + toCount;
+        }
+        for (const idx of (realIndices[p + '-' + link.to] || [])) {
+          realConns['p' + p + '-' + link.to + '-' + idx] = (realConns['p' + p + '-' + link.to + '-' + idx] || 0) + fromCount;
+        }
+      }
+    }
+  }
+  nodes.forEach(n => { if (realConns[n.id]) n.realConns = realConns[n.id]; });
+
   // Cross-plane host edges: each host connects to one leaf in each plane
   const hostLink = c.links.find(l => l.to === 'host');
   const hostNodes = nodes.filter(n => n.tier === 'host');
@@ -2415,6 +2441,26 @@ function buildTopoData() {
       n.pos = { x: startX + i * GAP_X, y: parseInt(rank) * GAP_Y };
     });
   }
+
+  const realConns = {};
+  for (const link of c.links) {
+    if (link.to === 'host') {
+      for (const idx of (tierRealIdx[link.from] || [])) {
+        const nid = link.from + '-' + idx;
+        realConns[nid] = (realConns[nid] || 0) + hostCountPerLeaf;
+      }
+    } else {
+      const fromCount = tierCounts[link.from] || 0;
+      const toCount = tierCounts[link.to] || 0;
+      for (const idx of (tierRealIdx[link.from] || [])) {
+        realConns[link.from + '-' + idx] = (realConns[link.from + '-' + idx] || 0) + toCount;
+      }
+      for (const idx of (tierRealIdx[link.to] || [])) {
+        realConns[link.to + '-' + idx] = (realConns[link.to + '-' + idx] || 0) + fromCount;
+      }
+    }
+  }
+  nodes.forEach(n => { if (realConns[n.id]) n.realConns = realConns[n.id]; });
 
   for (const link of c.links) {
     if (link.to === 'host') {
@@ -2807,7 +2853,7 @@ function renderTopology() {
     if (d.platform) html += '<br>Platform: ' + esc(d.platform);
     if (d.radix) html += '<br>Ports: ' + d.radix;
     if (d.tier === 'host') html += '<br>' + lastTopoConfig.hosts.gpusPerNode + ' GPUs/node';
-    const conns = (adj[d.id] || new Set()).size;
+    const conns = d.realConns || (adj[d.id] || new Set()).size;
     if (conns) html += '<br>Connections: ' + conns;
     tooltip.innerHTML = html;
     tooltip.style.display = 'block';
