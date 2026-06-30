@@ -494,6 +494,24 @@
   .mrc-compare-card .stat-note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.4; }
   .mrc-compare-card .exceeds-warning { color: var(--coral600); font-size: 11px; margin-top: 6px; font-weight: 500; }
   @media (max-width: 640px) { .mrc-comparison { grid-template-columns: 1fr; } }
+
+  .optic-toggle, .power-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-left: 12px; vertical-align: middle; }
+  .optic-toggle-btn, .power-toggle-btn {
+    padding: 4px 12px; font-size: 11px; font-weight: 600; border: none; cursor: pointer;
+    background: var(--bg2); color: var(--text2); transition: all 0.15s;
+  }
+  .optic-toggle-btn.active, .power-toggle-btn.active { background: var(--primary); color: #fff; }
+  .optic-toggle-btn:not(.active):hover, .power-toggle-btn:not(.active):hover { background: var(--bg3); }
+
+  [data-optic-mode="conventional"] .optic-lpo,
+  [data-optic-mode="lpo"] .optic-conv { display: none !important; }
+  [data-power-mode="typical"] .power-80,
+  [data-power-mode="typical"] .power-max,
+  [data-power-mode="eightyPct"] .power-typ,
+  [data-power-mode="eightyPct"] .power-max,
+  [data-power-mode="max"] .power-typ,
+  [data-power-mode="max"] .power-80 { display: none !important; }
+
   .error-msg {
     background: var(--coral50); color: var(--coral800);
     font-size: 13px; font-weight: 500; padding: 12px 16px;
@@ -903,13 +921,25 @@ const TIER_HINTS = {
 
 function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+const OPTIC_POWER = {
+  100: { conventional: 3.5, lpo: 3.5 },
+  200: { conventional: 5, lpo: 5 },
+  400: { conventional: 10, lpo: 5 },
+  800: { conventional: 16, lpo: 8 },
+};
+
+const DES_POWER = {
+  leaf:  { typ: 593, max: 1840 },
+  spine: { typ: 1032, max: 3848 },
+};
+
 const PLATFORMS = [
-  { name: '7060X6',        radix: 32,  type: 'fixed',   desc: '7060X6 (32-port)' },
-  { name: '7060X6',        radix: 64,  type: 'fixed',   desc: '7060X6 (64-port)' },
-  { name: '7800R4 4-slot', radix: 144, type: 'chassis', desc: '7800R4 4-slot (144-port)',  slots: 4,  portsPerSlot: 36 },
-  { name: '7800R4 8-slot', radix: 288, type: 'chassis', desc: '7800R4 8-slot (288-port)',  slots: 8,  portsPerSlot: 36 },
-  { name: '7800R4 12-slot',radix: 432, type: 'chassis', desc: '7800R4 12-slot (432-port)', slots: 12, portsPerSlot: 36 },
-  { name: '7800R4 16-slot',radix: 576, type: 'chassis', desc: '7800R4 16-slot (576-port)', slots: 16, portsPerSlot: 36 },
+  { name: '7060X6',        radix: 32,  type: 'fixed',   desc: '7060X6 (32-port)',  powerTyp: 320, powerMax: 1100 },
+  { name: '7060X6',        radix: 64,  type: 'fixed',   desc: '7060X6 (64-port)',  powerTyp: 640, powerMax: 2218 },
+  { name: '7800R4 4-slot', radix: 144, type: 'chassis', desc: '7800R4 4-slot (144-port)',  slots: 4,  portsPerSlot: 36, powerTyp: 4500, powerMax: 6801 },
+  { name: '7800R4 8-slot', radix: 288, type: 'chassis', desc: '7800R4 8-slot (288-port)',  slots: 8,  portsPerSlot: 36, powerTyp: 9000, powerMax: 14139 },
+  { name: '7800R4 12-slot',radix: 432, type: 'chassis', desc: '7800R4 12-slot (432-port)', slots: 12, portsPerSlot: 36, powerTyp: 13500, powerMax: 22394 },
+  { name: '7800R4 16-slot',radix: 576, type: 'chassis', desc: '7800R4 16-slot (576-port)', slots: 16, portsPerSlot: 36, powerTyp: 18000, powerMax: 28074 },
 ];
 
 let pendingSuggestion = null;
@@ -1298,6 +1328,21 @@ function syncBreakoutOptions() {
 function opticType(speed) {
   return { 100: 'QSFP28 100G SR4', 200: 'QSFP56 200G SR4', 400: 'QSFP-DD 400G SR4', 800: 'OSFP 800G SR8' }[speed] || speed + 'G';
 }
+function opticTypeLPO(speed) {
+  return { 100: 'QSFP28 100G SR4', 200: 'QSFP56 200G SR4', 400: 'QSFP-DD LPO-400G DR4', 800: 'OSFP LPO-800G-2DR4' }[speed] || speed + 'G';
+}
+function dualOptic(speed) {
+  return '<span class="optic-conv">' + opticType(speed) + '</span><span class="optic-lpo">' + opticTypeLPO(speed) + '</span>';
+}
+
+function toggleOpticMode(mode) {
+  document.querySelectorAll('.optic-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('results').dataset.opticMode = mode;
+}
+function togglePowerMode(mode) {
+  document.querySelectorAll('.power-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('results').dataset.powerMode = mode;
+}
 
 function fmtN(n) { return Math.round(n).toLocaleString(); }
 function iconServer() { return '<svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>'; }
@@ -1318,7 +1363,11 @@ function mkSection(icon, title, rows, note) {
 }
 
 function opticsSection(rows, noteText) {
-  let s = '<div class="result-section"><h3>' + iconPlug() + 'Optics breakdown</h3>';
+  let s = '<div class="result-section"><h3>' + iconPlug() + 'Optics breakdown';
+  s += '<span class="optic-toggle">';
+  s += '<button class="optic-toggle-btn active" data-mode="conventional" onclick="toggleOpticMode(\'conventional\')">Conventional</button>';
+  s += '<button class="optic-toggle-btn" data-mode="lpo" onclick="toggleOpticMode(\'lpo\')">LPO</button>';
+  s += '</span></h3>';
   s += '<p style="font-size:12px;color:var(--text3);margin-bottom:12px">Each link requires transceivers at both ends. Breakouts split a single switch optic into multiple host connections.</p>';
   s += '<table class="breakdown-table">';
   for (const [k, v, isSub, spacer] of rows) {
@@ -1412,6 +1461,7 @@ function calculate() {
   }
 
   let switchHtml = '', optHtml = '', diagramHtml = '';
+  const opticCounts = { spine: 0, host: 0, fabric: 0 };
   let totalSpine = 0, totalLeaf = 0;
 
   const linksPerNode = gpusPerNode * linksPerGpu;
@@ -1555,17 +1605,18 @@ function calculate() {
     const hOptSwitchBase = Math.ceil(totalHostLinks / breakout);
     const hOptHostBase   = totalHostLinks;
     const hostOptBase    = hOptSwitchBase + hOptHostBase;
+    opticCounts.host = hostOptBase;
 
     let optRows = [['Host ↔ spine links', fmtN(totalHostLinks)]];
     if (breakout === 1) {
-      optRows.push(['Total optics (×2 ends) · ' + opticType(hostSpeed), fmtN(hostOptBase)]);
+      optRows.push(['Total optics (×2 ends) · ' + dualOptic(hostSpeed), fmtN(hostOptBase)]);
     } else {
       optRows.push(['Switch-end breakout optics (' + breakout + ':1)', fmtN(hOptSwitchBase)]);
-      optRows.push(['Host-end optics · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+      optRows.push(['Host-end optics · ' + dualOptic(hostSpeed), fmtN(hOptHostBase)]);
     }
     optRows.push(['Total optics', fmtN(hostOptBase), true]);
 
-    optHtml = opticsSection(optRows, 'Host links: ' + opticType(hostSpeed) + '.');
+    optHtml = opticsSection(optRows, '<span class="optic-conv">Host links: ' + opticType(hostSpeed) + '. Reach: ~100m (multimode).</span><span class="optic-lpo">Host links: ' + opticTypeLPO(hostSpeed) + '. Reach: ~500m (single-mode).</span>');
 
   } else if (tierNum === 2) {
     const leafPerPlane  = Math.ceil(linksPerPlane / effDownlinks);
@@ -1589,6 +1640,8 @@ function calculate() {
     const hOptSwitchBase= Math.ceil(totalHostLinks / breakout);
     const hOptHostBase  = totalHostLinks;
     const hOptBase      = hOptSwitchBase + hOptHostBase;
+    opticCounts.spine = spOptBase;
+    opticCounts.host = hOptBase;
 
     if (bundleSize < 1) {
       const minCombo = minBalanced2Tier(linksPerPlane, breakout, oversub);
@@ -1624,20 +1677,20 @@ function calculate() {
 
     let optRows = [
       ['Leaf ↔ spine links', fmtN(spineLinks)],
-      ['Spine-tier optics (×2) · ' + opticType(spineSpeed), fmtN(spOptBase)],
+      ['Spine-tier optics (×2) · ' + dualOptic(spineSpeed), fmtN(spOptBase)],
       ['Spine-tier subtotal', fmtN(spOptBase), true],
       ['Host ↔ leaf links', fmtN(totalHostLinks), false, true]
     ];
     if (breakout === 1) {
-      optRows.push(['Host-tier optics (×2) · ' + opticType(hostSpeed), fmtN(hOptBase)]);
+      optRows.push(['Host-tier optics (×2) · ' + dualOptic(hostSpeed), fmtN(hOptBase)]);
     } else {
       optRows.push(['Switch-end breakout optics (' + breakout + ':1)', fmtN(hOptSwitchBase)]);
-      optRows.push(['Host-end optics · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+      optRows.push(['Host-end optics · ' + dualOptic(hostSpeed), fmtN(hOptHostBase)]);
     }
     optRows.push(['Host-tier subtotal', fmtN(hOptBase), true]);
     optRows.push(['Grand total optics', fmtN(spOptBase + hOptBase), true]);
 
-    optHtml = opticsSection(optRows, 'Spine links: ' + opticType(spineSpeed) + ' · Host links: ' + opticType(hostSpeed) + '.');
+    optHtml = opticsSection(optRows, '<span class="optic-conv">Spine links: ' + opticType(spineSpeed) + ' · Host links: ' + opticType(hostSpeed) + '. Reach: ~100m (multimode).</span><span class="optic-lpo">Spine links: ' + opticTypeLPO(spineSpeed) + ' · Host links: ' + opticTypeLPO(hostSpeed) + '. Reach: ~500m (single-mode).</span>');
 
     const uplinksStr = `${Number.isInteger(bundleSize) ? bundleSize : bundleSize.toFixed(1)}× ${spineSpeed}G uplinks`;
     diagramHtml = diagHeader + buildDiagram([
@@ -1712,6 +1765,8 @@ function calculate() {
     const hOptSwitchBase= Math.ceil(totalHostLinks / breakout);
     const hOptHostBase  = totalHostLinks;
     const hBase         = hOptSwitchBase + hOptHostBase;
+    opticCounts.spine = a2sBase + e2aBase;
+    opticCounts.host = hBase;
 
     if (e2aBundle < 1 || a2sBundle < 1) {
       const badBundle = e2aBundle < 1 ? 'edge-to-agg (' + e2aBundle.toFixed(2) + ')' : 'agg-to-spine (' + a2sBundle.toFixed(2) + ')';
@@ -1754,24 +1809,24 @@ function calculate() {
 
     let optRows = [
       ['Agg leaf ↔ spine links', fmtN(a2sLinks)],
-      ['Spine-tier optics (×2) · ' + opticType(spineSpeed), fmtN(a2sBase)],
+      ['Spine-tier optics (×2) · ' + dualOptic(spineSpeed), fmtN(a2sBase)],
       ['Spine-tier subtotal', fmtN(a2sBase), true],
       ['Edge leaf ↔ agg leaf links', fmtN(e2aLinks), false, true],
-      ['Agg-tier optics (×2) · ' + opticType(spineSpeed), fmtN(e2aBase)],
+      ['Agg-tier optics (×2) · ' + dualOptic(spineSpeed), fmtN(e2aBase)],
       ['Agg-tier subtotal', fmtN(e2aBase), true],
       ['Host ↔ edge leaf links', fmtN(totalHostLinks), false, true]
     ];
 
     if (breakout === 1) {
-      optRows.push(['Host-tier optics (×2) · ' + opticType(hostSpeed), fmtN(hBase)]);
+      optRows.push(['Host-tier optics (×2) · ' + dualOptic(hostSpeed), fmtN(hBase)]);
     } else {
       optRows.push(['Switch-end breakout optics (' + breakout + ':1)', fmtN(hOptSwitchBase)]);
-      optRows.push(['Host-end optics · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+      optRows.push(['Host-end optics · ' + dualOptic(hostSpeed), fmtN(hOptHostBase)]);
     }
     optRows.push(['Host-tier subtotal', fmtN(hBase), true]);
     optRows.push(['Grand total optics', fmtN(a2sBase + e2aBase + hBase), true]);
 
-    optHtml = opticsSection(optRows, 'Spine/agg links: ' + opticType(spineSpeed) + ' · Host links: ' + opticType(hostSpeed) + '.');
+    optHtml = opticsSection(optRows, '<span class="optic-conv">Spine/agg links: ' + opticType(spineSpeed) + ' · Host links: ' + opticType(hostSpeed) + '. Reach: ~100m (multimode).</span><span class="optic-lpo">Spine/agg links: ' + opticTypeLPO(spineSpeed) + ' · Host links: ' + opticTypeLPO(hostSpeed) + '. Reach: ~500m (single-mode).</span>');
 
     const e2aStr = `${Number.isInteger(e2aBundle) ? e2aBundle : e2aBundle.toFixed(1)}× ${spineSpeed}G links`;
     const a2sStr = `${Number.isInteger(a2sBundle) ? a2sBundle : a2sBundle.toFixed(1)}× ${spineSpeed}G links`;
@@ -1837,20 +1892,22 @@ function calculate() {
     const fabricOpticsTotal = totalLeaf * DES_FABRIC_PORTS * 2;
     const hOptSwitchBase = Math.ceil(totalHostLinks / breakout);
     const hOptHostBase = totalHostLinks;
+    opticCounts.fabric = fabricOpticsTotal;
+    opticCounts.host = hOptSwitchBase + hOptHostBase;
 
     let optRows = [['Host ↔ leaf links', fmtN(totalHostLinks)]];
     if (breakout === 1) {
-      optRows.push(['Host optics (×2 ends) · ' + opticType(hostSpeed), fmtN(hOptSwitchBase + hOptHostBase)]);
+      optRows.push(['Host optics (×2 ends) · ' + dualOptic(hostSpeed), fmtN(hOptSwitchBase + hOptHostBase)]);
     } else {
       optRows.push(['Leaf-end breakout optics (' + breakout + ':1)', fmtN(hOptSwitchBase)]);
-      optRows.push(['Host-end optics · ' + opticType(hostSpeed), fmtN(hOptHostBase)]);
+      optRows.push(['Host-end optics · ' + dualOptic(hostSpeed), fmtN(hOptHostBase)]);
     }
     optRows.push(['Host optics subtotal', fmtN(hOptSwitchBase + hOptHostBase), true]);
     optRows.push(['Leaf ↔ spine fabric links', fmtN(totalLeaf * DES_FABRIC_PORTS), false, true]);
-    optRows.push(['Fabric optics (×2 ends) · OSFP 800G', fmtN(fabricOpticsTotal)]);
+    optRows.push(['Fabric optics (×2 ends) · <span class="optic-conv">OSFP 800G</span><span class="optic-lpo">OSFP LPO-800G-2DR4</span>', fmtN(fabricOpticsTotal)]);
     optRows.push(['Grand total optics', fmtN(hOptSwitchBase + hOptHostBase + fabricOpticsTotal), true]);
 
-    optHtml = opticsSection(optRows, 'Host links: ' + opticType(hostSpeed) + ' · Fabric links: OSFP 800G.');
+    optHtml = opticsSection(optRows, '<span class="optic-conv">Host links: ' + opticType(hostSpeed) + ' · Fabric links: OSFP 800G. Reach: ~100m (multimode).</span><span class="optic-lpo">Host links: ' + opticTypeLPO(hostSpeed) + ' · Fabric links: OSFP LPO-800G-2DR4. Reach: ~500m (single-mode).</span>');
 
     const fabricStr = DES_FABRIC_PORTS + '× 800G fabric links';
     diagramHtml = diagHeader + buildDiagram([
@@ -1973,8 +2030,91 @@ function calculate() {
     }
   }
 
-  out += switchHtml + optHtml;
+  // Power consumption estimates
+  const spineOpticSpeed = tierNum === 4 ? 800 : spineSpeed;
+  const hostOpticSpeed = hostSpeed;
+  const spConvW = opticCounts.spine * (OPTIC_POWER[spineOpticSpeed]?.conventional || 0);
+  const spLpoW  = opticCounts.spine * (OPTIC_POWER[spineOpticSpeed]?.lpo || 0);
+  const hConvW  = opticCounts.host  * (OPTIC_POWER[hostOpticSpeed]?.conventional || 0);
+  const hLpoW   = opticCounts.host  * (OPTIC_POWER[hostOpticSpeed]?.lpo || 0);
+  const fConvW  = opticCounts.fabric * (OPTIC_POWER[800]?.conventional || 0);
+  const fLpoW   = opticCounts.fabric * (OPTIC_POWER[800]?.lpo || 0);
+  const optConvTotal = spConvW + hConvW + fConvW;
+  const optLpoTotal  = spLpoW + hLpoW + fLpoW;
 
+  let switchTypW = 0, switchMaxW = 0;
+  if (tierNum === 4) {
+    switchTypW = totalLeaf * DES_POWER.leaf.typ + totalSpine * DES_POWER.spine.typ;
+    switchMaxW = totalLeaf * DES_POWER.leaf.max + totalSpine * DES_POWER.spine.max;
+  } else {
+    switchTypW = totalSpine * (spinePlatform?.powerTyp || 0) + totalLeaf * (leafPlatform?.powerTyp || 0);
+    switchMaxW = totalSpine * (spinePlatform?.powerMax || 0) + totalLeaf * (leafPlatform?.powerMax || 0);
+  }
+  const switch80W = Math.round(switchMaxW * 0.8);
+
+  const lpoSavingsW = optConvTotal - optLpoTotal;
+  const totalConvTyp = optConvTotal + switchTypW, totalConv80 = optConvTotal + switch80W, totalConvMax = optConvTotal + switchMaxW;
+  function lpoPct(total) { return total > 0 ? Math.round((lpoSavingsW / total) * 100) : 0; }
+
+  function kw(w) { return (w / 1000).toFixed(1) + ' kW'; }
+  function opticDual(convW, lpoW) {
+    return '<span class="optic-conv">' + kw(convW) + '</span><span class="optic-lpo">' + kw(lpoW) + '</span>';
+  }
+  function swTriple(typW, p80W, maxW) {
+    return '<span class="power-typ">' + kw(typW) + '</span><span class="power-80">' + kw(p80W) + '</span><span class="power-max">' + kw(maxW) + '</span>';
+  }
+  function totalSix(optW, typW, p80W, maxW) {
+    return '<span class="optic-conv power-typ">' + kw(optW + typW) + '</span>'
+         + '<span class="optic-conv power-80">'  + kw(optW + p80W) + '</span>'
+         + '<span class="optic-conv power-max">' + kw(optW + maxW) + '</span>'
+         + '<span class="optic-lpo power-typ">'  + kw(optW - lpoSavingsW + typW) + '</span>'
+         + '<span class="optic-lpo power-80">'   + kw(optW - lpoSavingsW + p80W) + '</span>'
+         + '<span class="optic-lpo power-max">'  + kw(optW - lpoSavingsW + maxW) + '</span>';
+  }
+
+  let powerHtml = '<div class="result-section"><h3>' + iconPlug() + 'Estimated power consumption';
+  powerHtml += '<span class="power-toggle">';
+  powerHtml += '<button class="power-toggle-btn" data-mode="typical" onclick="togglePowerMode(\'typical\')">Typical</button>';
+  powerHtml += '<button class="power-toggle-btn active" data-mode="eightyPct" onclick="togglePowerMode(\'eightyPct\')">80%</button>';
+  powerHtml += '<button class="power-toggle-btn" data-mode="max" onclick="togglePowerMode(\'max\')">Max</button>';
+  powerHtml += '</span></h3>';
+  powerHtml += '<table class="breakdown-table">';
+
+  if (opticCounts.spine > 0) powerHtml += '<tr><td>Spine/fabric optics (' + fmtN(opticCounts.spine) + ')</td><td>' + opticDual(spConvW, spLpoW) + '</td></tr>';
+  if (opticCounts.fabric > 0) powerHtml += '<tr><td>DES fabric optics (' + fmtN(opticCounts.fabric) + ')</td><td>' + opticDual(fConvW, fLpoW) + '</td></tr>';
+  if (opticCounts.host > 0) powerHtml += '<tr><td>Host optics (' + fmtN(opticCounts.host) + ')</td><td>' + opticDual(hConvW, hLpoW) + '</td></tr>';
+  powerHtml += '<tr class="subtotal"><td>Optics subtotal</td><td>' + opticDual(optConvTotal, optLpoTotal) + '</td></tr>';
+
+  if (tierNum === 4) {
+    const leafTyp = totalLeaf * DES_POWER.leaf.typ, leafMax = totalLeaf * DES_POWER.leaf.max;
+    const spnTyp = totalSpine * DES_POWER.spine.typ, spnMax = totalSpine * DES_POWER.spine.max;
+    if (totalLeaf > 0) powerHtml += '<tr><td style="padding-top:14px">DES leaves (' + fmtN(totalLeaf) + ')</td><td style="padding-top:14px">' + swTriple(leafTyp, Math.round(leafMax * 0.8), leafMax) + '</td></tr>';
+    if (totalSpine > 0) powerHtml += '<tr><td>DES spines (' + fmtN(totalSpine) + ')</td><td>' + swTriple(spnTyp, Math.round(spnMax * 0.8), spnMax) + '</td></tr>';
+  } else {
+    const spnTyp = totalSpine * (spinePlatform?.powerTyp || 0), spnMax = totalSpine * (spinePlatform?.powerMax || 0);
+    const lfTyp = totalLeaf * (leafPlatform?.powerTyp || 0), lfMax = totalLeaf * (leafPlatform?.powerMax || 0);
+    if (totalSpine > 0 && spinePlatform?.powerMax) powerHtml += '<tr><td style="padding-top:14px">Spine switches (' + fmtN(totalSpine) + ')</td><td style="padding-top:14px">' + swTriple(spnTyp, Math.round(spnMax * 0.8), spnMax) + '</td></tr>';
+    if (totalLeaf > 0 && leafPlatform?.powerMax) powerHtml += '<tr><td>Leaf switches (' + fmtN(totalLeaf) + ')</td><td>' + swTriple(lfTyp, Math.round(lfMax * 0.8), lfMax) + '</td></tr>';
+  }
+  powerHtml += '<tr class="subtotal"><td>Switch subtotal</td><td>' + swTriple(switchTypW, switch80W, switchMaxW) + '</td></tr>';
+  powerHtml += '<tr class="subtotal"><td>Total fabric power</td><td>' + totalSix(optConvTotal, switchTypW, switch80W, switchMaxW) + '</td></tr>';
+
+  if (lpoSavingsW > 0) {
+    powerHtml += '<tr><td colspan="2">'
+      + '<span class="optic-lpo power-typ">LPO savings: ' + kw(lpoSavingsW) + ' (' + lpoPct(totalConvTyp) + '% reduction in total power)</span>'
+      + '<span class="optic-lpo power-80">LPO savings: ' + kw(lpoSavingsW) + ' (' + lpoPct(totalConv80) + '% reduction in total power)</span>'
+      + '<span class="optic-lpo power-max">LPO savings: ' + kw(lpoSavingsW) + ' (' + lpoPct(totalConvMax) + '% reduction in total power)</span>'
+      + '</td></tr>';
+  }
+
+  powerHtml += '</table>';
+  powerHtml += '<div class="note-box">Switch power: typical at 25°C/50% load, 80% and max at 40°C/100% load. All figures exclude optics (calculated separately). Source: Arista platform datasheets.</div>';
+  powerHtml += '</div>';
+
+  out += switchHtml + optHtml + powerHtml;
+
+  el.dataset.opticMode = 'conventional';
+  el.dataset.powerMode = 'eightyPct';
   el.innerHTML = out;
   document.getElementById('diagram-panel').innerHTML = diagramHtml;
   if (lastTopoConfig) {

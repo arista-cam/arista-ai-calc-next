@@ -72,4 +72,5 @@ The tool suggests optimal switch platforms based on your inputs. Apply the sugge
 - **Metrics grid** — total GPUs, backend links, spine/leaf/total switch counts
 - **Switch breakdown** — per-tier tables with platform names, switch counts per plane, port utilization, and bundle sizes
 - **Topology diagram** — vertical data path from compute node through leaf/spine layers with link counts
-- **Optics breakdown** — transceiver counts by tier and type (QSFP28, QSFP-DD, OSFP) with grand total
+- **Optics breakdown** — transceiver counts by tier and type (QSFP28, QSFP-DD, OSFP) with grand total, plus a **Conventional / LPO** toggle to switch between standard DSP-based and Linear Pluggable Optics
+- **Estimated power consumption** — optics and switch power with a **Typical / 80% / Max** toggle. Switch power figures sourced from Arista platform datasheets (excludes optics, calculated separately). LPO mode shows total power savings vs conventional
