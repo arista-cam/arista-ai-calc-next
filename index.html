@@ -2204,7 +2204,8 @@ function buildMRCTopoData() {
   const planeCount = c.planes;
   const GAP_X = 120, GAP_Y = 160, PLANE_GAP = 140;
 
-  const hostCountPerLeaf = Math.ceil(c.hosts.perLeaf / c.hosts.linksPerNode);
+  const linksPerNodePerPlane = Math.ceil(c.hosts.linksPerNode / planeCount);
+  const hostCountPerLeaf = Math.ceil(c.hosts.perLeaf / linksPerNodePerPlane);
   const bottomTier = c.tiers[c.tiers.length - 1];
 
   function displayedCount(count) { return count <= MAX_SHOW ? count : 5; }
@@ -2361,8 +2362,8 @@ function buildMRCTopoData() {
       edges.push({
         source: 'p' + p + '-' + bottomTier.id + '-' + leafIdx,
         target: hn.id,
-        label: hostLink ? c.hosts.linksPerNode + '×' + hostLink.speed + 'G' : '',
-        weight: 1.5, bundle: c.hosts.linksPerNode,
+        label: hostLink ? linksPerNodePerPlane + '×' + hostLink.speed + 'G' : '',
+        weight: 1.5, bundle: linksPerNodePerPlane,
         speed: hostLink ? hostLink.speed : 400, plane: p
       });
     }
@@ -2777,7 +2778,8 @@ function renderTopology() {
       if (isRail) {
         labelText = '1×' + link.speed + 'G/rail';
       } else if (isMRC) {
-        labelText = c.hosts.linksPerNode + '×' + link.speed + 'G/plane';
+        const lppn = Math.ceil(c.hosts.linksPerNode / c.planes);
+        labelText = lppn + '×' + link.speed + 'G/plane';
       } else {
         labelText = c.hosts.linksPerNode + '×' + link.speed + 'G/node';
       }
