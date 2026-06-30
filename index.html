@@ -1399,6 +1399,9 @@ function calculate() {
   const tierNum     = parseInt(document.querySelector('input[name=tier]:checked').value);
   const el          = document.getElementById('results');
   document.getElementById('diagram-panel').innerHTML = '';
+  document.getElementById('suggestion-leaf').style.display = 'none';
+  document.getElementById('suggestion-spine').style.display = 'none';
+  pendingSuggestion = null;
 
   if (!totalGPUs && !numNodes) {
     el.innerHTML = '<div class="error-msg">Enter the number of GPUs or nodes to get started.</div>';
