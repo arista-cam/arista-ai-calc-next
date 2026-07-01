@@ -1890,6 +1890,7 @@ function calculate() {
     ], planes) + '</div>';
 
     lastTopoConfig = { tier: 3, planes, title: diagTitle,
+      pods: { count: pods, edgeLeavesPerPod, aggPerPod, aggUplinks: uplinks },
       tiers: [
         { id: 'spine', label: spinePlatform.name, perPlane: spinePerPlane, radix: spineRadix },
         { id: 'aggLeaf', label: leafPlatform.name, perPlane: leaf1PerPlane, radix: leafRadix },
@@ -2330,15 +2331,68 @@ function buildMRCTopoData() {
       const fromIdxs = realIndices[fromKey] || [];
       const toIdxs = realIndices[toKey] || [];
       const bStr = Number.isInteger(link.bundle) ? String(link.bundle) : link.bundle.toFixed(1);
-      for (const f of fromIdxs) {
-        for (const t of toIdxs) {
-          edges.push({
-            source: 'p' + p + '-' + link.from + '-' + f,
-            target: 'p' + p + '-' + link.to + '-' + t,
-            label: bStr + '×' + link.speed + 'G',
-            weight: Math.min(Math.max(1, link.bundle / 2), 3),
-            bundle: link.bundle, speed: link.speed, plane: p
-          });
+
+      if (c.pods && ((link.from === 'aggLeaf' && link.to === 'edgeLeaf') || (link.from === 'edgeLeaf' && link.to === 'aggLeaf'))) {
+        const aggIdxs = realIndices[p + '-aggLeaf'] || [];
+        const edgeIdxs = realIndices[p + '-edgeLeaf'] || [];
+        for (const ai of aggIdxs) {
+          const aggPod = Math.floor(ai / c.pods.aggPerPod);
+          for (const ei of edgeIdxs) {
+            const edgePod = Math.floor(ei / c.pods.edgeLeavesPerPod);
+            if (aggPod === edgePod) {
+              edges.push({
+                source: 'p' + p + '-aggLeaf-' + ai, target: 'p' + p + '-edgeLeaf-' + ei,
+                label: bStr + '×' + link.speed + 'G',
+                weight: Math.min(Math.max(1, link.bundle / 2), 3),
+                bundle: link.bundle, speed: link.speed, plane: p
+              });
+            }
+          }
+        }
+      } else if (c.pods && ((link.from === 'spine' && link.to === 'aggLeaf') || (link.from === 'aggLeaf' && link.to === 'spine'))) {
+        const aggIdxs = realIndices[p + '-aggLeaf'] || [];
+        const spineIdxs = realIndices[p + '-spine'] || [];
+        const totalAgg = c.tiers.find(t => t.id === 'aggLeaf')?.perPlane || 0;
+        const totalSpines = c.tiers.find(t => t.id === 'spine')?.perPlane || 0;
+        const halfBand = c.pods.aggUplinks / 2;
+        for (const ai of aggIdxs) {
+          const center = totalAgg > 0 ? ai / totalAgg * totalSpines : 0;
+          let connected = false;
+          for (const si of spineIdxs) {
+            if (c.pods.aggUplinks >= totalSpines || (si >= center - halfBand && si < center + halfBand)) {
+              edges.push({
+                source: 'p' + p + '-spine-' + si, target: 'p' + p + '-aggLeaf-' + ai,
+                label: bStr + '×' + link.speed + 'G',
+                weight: Math.min(Math.max(1, link.bundle / 2), 3),
+                bundle: link.bundle, speed: link.speed, plane: p
+              });
+              connected = true;
+            }
+          }
+          if (!connected && spineIdxs.length > 0) {
+            let nearest = spineIdxs[0], minDist = Math.abs(spineIdxs[0] - center);
+            for (const si of spineIdxs) {
+              if (Math.abs(si - center) < minDist) { minDist = Math.abs(si - center); nearest = si; }
+            }
+            edges.push({
+              source: 'p' + p + '-spine-' + nearest, target: 'p' + p + '-aggLeaf-' + ai,
+              label: bStr + '×' + link.speed + 'G',
+              weight: Math.min(Math.max(1, link.bundle / 2), 3),
+              bundle: link.bundle, speed: link.speed, plane: p
+            });
+          }
+        }
+      } else {
+        for (const f of fromIdxs) {
+          for (const t of toIdxs) {
+            edges.push({
+              source: 'p' + p + '-' + link.from + '-' + f,
+              target: 'p' + p + '-' + link.to + '-' + t,
+              label: bStr + '×' + link.speed + 'G',
+              weight: Math.min(Math.max(1, link.bundle / 2), 3),
+              bundle: link.bundle, speed: link.speed, plane: p
+            });
+          }
         }
       }
     }
@@ -2376,6 +2430,27 @@ function buildMRCTopoData() {
         for (const idx of (realIndices[leafKey] || [])) {
           const nid = 'p' + p + '-' + link.from + '-' + idx;
           realConns[nid] = (realConns[nid] || 0) + hostCountPerLeaf;
+        }
+      }
+    } else if (c.pods && (link.from === 'aggLeaf' && link.to === 'edgeLeaf' || link.from === 'edgeLeaf' && link.to === 'aggLeaf')) {
+      for (let p = 0; p < planeCount; p++) {
+        for (const idx of (realIndices[p + '-aggLeaf'] || [])) {
+          realConns['p' + p + '-aggLeaf-' + idx] = (realConns['p' + p + '-aggLeaf-' + idx] || 0) + c.pods.edgeLeavesPerPod;
+        }
+        for (const idx of (realIndices[p + '-edgeLeaf'] || [])) {
+          realConns['p' + p + '-edgeLeaf-' + idx] = (realConns['p' + p + '-edgeLeaf-' + idx] || 0) + c.pods.aggPerPod;
+        }
+      }
+    } else if (c.pods && (link.from === 'spine' && link.to === 'aggLeaf' || link.from === 'aggLeaf' && link.to === 'spine')) {
+      const totalAgg = c.tiers.find(t => t.id === 'aggLeaf')?.perPlane || 0;
+      const totalSpines = c.tiers.find(t => t.id === 'spine')?.perPlane || 0;
+      const connsPerSpine = Math.ceil(totalAgg * c.pods.aggUplinks / totalSpines);
+      for (let p = 0; p < planeCount; p++) {
+        for (const idx of (realIndices[p + '-aggLeaf'] || [])) {
+          realConns['p' + p + '-aggLeaf-' + idx] = (realConns['p' + p + '-aggLeaf-' + idx] || 0) + c.pods.aggUplinks;
+        }
+        for (const idx of (realIndices[p + '-spine'] || [])) {
+          realConns['p' + p + '-spine-' + idx] = (realConns['p' + p + '-spine-' + idx] || 0) + connsPerSpine;
         }
       }
     } else {
@@ -2519,6 +2594,22 @@ function buildTopoData() {
         const nid = link.from + '-' + idx;
         realConns[nid] = (realConns[nid] || 0) + hostCountPerLeaf;
       }
+    } else if (c.pods && (link.from === 'aggLeaf' && link.to === 'edgeLeaf' || link.from === 'edgeLeaf' && link.to === 'aggLeaf')) {
+      for (const idx of (tierRealIdx['aggLeaf'] || [])) {
+        realConns['aggLeaf-' + idx] = (realConns['aggLeaf-' + idx] || 0) + c.pods.edgeLeavesPerPod;
+      }
+      for (const idx of (tierRealIdx['edgeLeaf'] || [])) {
+        realConns['edgeLeaf-' + idx] = (realConns['edgeLeaf-' + idx] || 0) + c.pods.aggPerPod;
+      }
+    } else if (c.pods && (link.from === 'spine' && link.to === 'aggLeaf' || link.from === 'aggLeaf' && link.to === 'spine')) {
+      const totalSpines = tierCounts['spine'];
+      const connsPerSpine = Math.ceil(tierCounts['aggLeaf'] * c.pods.aggUplinks / totalSpines);
+      for (const idx of (tierRealIdx['aggLeaf'] || [])) {
+        realConns['aggLeaf-' + idx] = (realConns['aggLeaf-' + idx] || 0) + c.pods.aggUplinks;
+      }
+      for (const idx of (tierRealIdx['spine'] || [])) {
+        realConns['spine-' + idx] = (realConns['spine-' + idx] || 0) + connsPerSpine;
+      }
     } else {
       const fromCount = tierCounts[link.from] || 0;
       const toCount = tierCounts[link.to] || 0;
@@ -2582,7 +2673,58 @@ function buildTopoData() {
     const toIdxs = tierRealIdx[link.to] || [];
     const bStr = Number.isInteger(link.bundle) ? String(link.bundle) : link.bundle.toFixed(1);
 
-    if (fromIdxs.length * toIdxs.length <= 200) {
+    // Pod-aware edges for 3-tier aggLeaf↔edgeLeaf
+    if (c.pods && ((link.from === 'aggLeaf' && link.to === 'edgeLeaf') || (link.from === 'edgeLeaf' && link.to === 'aggLeaf'))) {
+      const aggIdxs = tierRealIdx['aggLeaf'] || [];
+      const edgeIdxs = tierRealIdx['edgeLeaf'] || [];
+      for (const ai of aggIdxs) {
+        const aggPod = Math.floor(ai / c.pods.aggPerPod);
+        for (const ei of edgeIdxs) {
+          const edgePod = Math.floor(ei / c.pods.edgeLeavesPerPod);
+          if (aggPod === edgePod) {
+            edges.push({
+              source: 'aggLeaf-' + ai, target: 'edgeLeaf-' + ei,
+              label: bStr + '×' + link.speed + 'G',
+              weight: Math.min(Math.max(1, link.bundle / 2), 4),
+              bundle: link.bundle, speed: link.speed
+            });
+          }
+        }
+      }
+    } else if (c.pods && ((link.from === 'spine' && link.to === 'aggLeaf') || (link.from === 'aggLeaf' && link.to === 'spine'))) {
+      const aggIdxs = tierRealIdx['aggLeaf'] || [];
+      const spineIdxs = tierRealIdx['spine'] || [];
+      const totalAgg = tierCounts['aggLeaf'];
+      const totalSpines = tierCounts['spine'];
+      const halfBand = c.pods.aggUplinks / 2;
+      for (const ai of aggIdxs) {
+        const center = totalAgg > 0 ? ai / totalAgg * totalSpines : 0;
+        let connected = false;
+        for (const si of spineIdxs) {
+          if (c.pods.aggUplinks >= totalSpines || (si >= center - halfBand && si < center + halfBand)) {
+            edges.push({
+              source: 'spine-' + si, target: 'aggLeaf-' + ai,
+              label: bStr + '×' + link.speed + 'G',
+              weight: Math.min(Math.max(1, link.bundle / 2), 4),
+              bundle: link.bundle, speed: link.speed
+            });
+            connected = true;
+          }
+        }
+        if (!connected && spineIdxs.length > 0) {
+          let nearest = spineIdxs[0], minDist = Math.abs(spineIdxs[0] - center);
+          for (const si of spineIdxs) {
+            if (Math.abs(si - center) < minDist) { minDist = Math.abs(si - center); nearest = si; }
+          }
+          edges.push({
+            source: 'spine-' + nearest, target: 'aggLeaf-' + ai,
+            label: bStr + '×' + link.speed + 'G',
+            weight: Math.min(Math.max(1, link.bundle / 2), 4),
+            bundle: link.bundle, speed: link.speed
+          });
+        }
+      }
+    } else if (fromIdxs.length * toIdxs.length <= 200) {
       for (const f of fromIdxs) {
         for (const t of toIdxs) {
           edges.push({
