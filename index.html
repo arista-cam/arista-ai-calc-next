@@ -437,12 +437,24 @@
   .metric-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
   .info-tip {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 14px; height: 14px; border-radius: 50%;
-    border: 1px solid var(--text3); background: var(--bg2);
-    font-size: 9px; font-weight: 600; font-style: italic;
-    color: var(--text3); cursor: help; margin-left: 4px;
+    width: 14px; height: 14px; cursor: help; margin-left: 4px;
     vertical-align: middle; line-height: 1; flex-shrink: 0;
+    position: relative; color: var(--text3);
   }
+  .info-tip svg { width: 14px; height: 14px; fill: currentColor; }
+  .info-tip::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%); white-space: normal; width: max-content;
+    max-width: 260px; padding: 6px 10px; border-radius: 6px;
+    background: var(--text); color: var(--bg); font-size: 12px;
+    font-weight: 400; font-style: normal; line-height: 1.4;
+    pointer-events: none; opacity: 0; transition: opacity 0.15s;
+    z-index: 100; text-align: left;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .info-tip:hover::after { opacity: 1; }
+  .info-tip:hover svg { color: var(--accent); }
 
   .result-section {
     border: 1px solid var(--border);
@@ -1402,7 +1414,7 @@ function iconServer() { return '<svg viewBox="0 0 24 24"><rect x="2" y="2" width
 function iconBranch() { return '<svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="12" r="2"/><line x1="6" y1="8" x2="6" y2="16"/><path d="M6 12 Q14 12 18 12" fill="none"/></svg>'; }
 function iconPlug()   { return '<svg viewBox="0 0 24 24"><path d="M12 22v-4"/><path d="M8 22v-4"/><rect x="6" y="14" width="8" height="4" rx="1"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="12" y1="2" x2="12" y2="6"/><path d="M6 6h8v4a4 4 0 0 1-8 0V6z"/></svg>'; }
 
-function tip(text) { return ' <span class="info-tip" title="' + esc(text) + '">i</span>'; }
+function tip(text) { return ' <span class="info-tip" data-tip="' + esc(text) + '"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="8" y="12" text-anchor="middle" font-size="10" font-weight="600" font-style="italic" fill="currentColor">i</text></svg></span>'; }
 function metric(val, label, sub, tipText) {
   return '<div class="metric-card"><div class="metric-label">' + label + (tipText ? tip(tipText) : '') + '</div><div class="metric-val">' + val + '</div>' + (sub ? '<div class="metric-sub">' + sub + '</div>' : '') + '</div>';
 }
