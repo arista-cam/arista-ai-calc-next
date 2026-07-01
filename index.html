@@ -1242,22 +1242,19 @@ function autoSelect3Tier(linksPerPlane, breakout) {
       const leaf2PerPlane = Math.ceil(linksPerPlane / effDown);
       if (pass === 0 && leaf2PerPlane > uplinks) continue;
 
-      const a2sDownlinks  = leaf2PerPlane * uplinks;
-      const leaf1PerPlane = Math.ceil(a2sDownlinks / physDown);
-
-      if (leaf1PerPlane > uplinks || uplinks % leaf1PerPlane !== 0) continue;
-
+      // Pod model: edge leaves + agg switches per pod
+      const podsNeeded    = Math.ceil(leaf2PerPlane / physDown);
+      const leaf1PerPlane = podsNeeded * uplinks;
       const spinePortsNeeded = leaf1PerPlane * uplinks;
 
       for (const sp of PLATFORMS) {
         if (pass === 0 && sp.radix < lp.radix) continue;
+        if (podsNeeded > sp.radix) continue;
         const spinePerPlane = Math.ceil(spinePortsNeeded / sp.radix);
-        if (spinePerPlane <= uplinks && uplinks % spinePerPlane === 0) {
-          const ports = (leaf2PerPlane + leaf1PerPlane) * lp.radix + spinePerPlane * sp.radix;
-          const switches = leaf2PerPlane + leaf1PerPlane + spinePerPlane;
-          if (!best || ports < best.ports || (ports === best.ports && switches < best.switches)) {
-            best = { leaf: lp.radix, spine: sp.radix, ports, switches };
-          }
+        const ports = (leaf2PerPlane + leaf1PerPlane) * lp.radix + spinePerPlane * sp.radix;
+        const switches = leaf2PerPlane + leaf1PerPlane + spinePerPlane;
+        if (!best || ports < best.ports || (ports === best.ports && switches < best.switches)) {
+          best = { leaf: lp.radix, spine: sp.radix, ports, switches };
         }
       }
     }
@@ -1515,7 +1512,7 @@ function calculate() {
 
   let switchHtml = '', optHtml = '', diagramHtml = '';
   const opticCounts = { spine: 0, hostSwitch: 0, hostEnd: 0, fabric: 0 };
-  let totalSpine = 0, totalLeaf = 0;
+  let totalSpine = 0, totalLeaf = 0, pods = 0;
 
   const linksPerNode = gpusPerNode * linksPerGpu;
   const nicBreakout = planes > 1 && linksPerGpu < planes;
@@ -1790,36 +1787,25 @@ function calculate() {
     const leaf2PerPlane = Math.ceil(linksPerPlane / effDownlinks);
     const totalLeaf2    = leaf2PerPlane * planes;
 
-    const a2sDownlinksNeeded = leaf2PerPlane * uplinks;
-    const balance3      = document.getElementById('balance-topo').value === '1';
-    const origLeaf1PP   = Math.ceil(a2sDownlinksNeeded / physDownlinks);
-    let leaf1PerPlane   = origLeaf1PP;
-    if (balance3 && uplinks > 0 && uplinks % leaf1PerPlane !== 0) {
-      leaf1PerPlane = nextDivisorGte(leaf1PerPlane, uplinks);
-    }
+    // Pod model: each pod has edgeLeavesPerPod edge leaves and aggPerPod agg switches
+    const edgeLeavesPerPod = physDownlinks;
+    const aggPerPod        = uplinks;
+    pods                   = Math.ceil(leaf2PerPlane / edgeLeavesPerPod);
+
+    const leaf1PerPlane = pods * aggPerPod;
     const totalLeaf1    = leaf1PerPlane * planes;
 
-    const spinePortsNeeded = leaf1PerPlane * uplinks;
-    const origSpinePP3  = Math.ceil(spinePortsNeeded / spineRadix);
-    let spinePerPlane   = origSpinePP3;
-    if (balance3 && uplinks > 0 && uplinks % spinePerPlane !== 0) {
-      spinePerPlane = nextDivisorGte(spinePerPlane, uplinks);
-    }
+    // Spines: total agg uplinks distributed across spine switches
+    const aggUplinksTotal = leaf1PerPlane * uplinks;
+    let spinePerPlane   = Math.ceil(aggUplinksTotal / spineRadix);
     totalSpine          = spinePerPlane * planes;
 
-    let balance3Note    = '';
-    if (balance3 && (leaf1PerPlane !== origLeaf1PP || spinePerPlane !== origSpinePP3)) {
-      const parts = [];
-      if (leaf1PerPlane !== origLeaf1PP) parts.push('agg leaves ' + origLeaf1PP + ' → ' + leaf1PerPlane);
-      if (spinePerPlane !== origSpinePP3) parts.push('spines ' + origSpinePP3 + ' → ' + spinePerPlane);
-      balance3Note = 'Balanced per plane: ' + parts.join(', ') + ' for even link distribution.';
-    }
-
-    const e2aBundle     = uplinks / leaf1PerPlane;
-    const e2aBundleStr  = Number.isInteger(e2aBundle) ? e2aBundle : e2aBundle.toFixed(2) + ' (unbalanced)';
-
-    const a2sBundle     = uplinks / spinePerPlane;
-    const a2sBundleStr  = Number.isInteger(a2sBundle) ? a2sBundle : a2sBundle.toFixed(2) + ' (unbalanced)';
+    // In the pod model, each edge connects to each agg in its pod with 1 link
+    const e2aBundle     = 1;
+    const e2aBundleStr  = '1';
+    // Each agg connects to uplinks distinct spines with 1 link each
+    const a2sBundle     = 1;
+    const a2sBundleStr  = '1';
 
     totalLeaf           = totalLeaf1 + totalLeaf2;
 
@@ -1836,26 +1822,10 @@ function calculate() {
     opticCounts.hostSwitch = hOptSwitchBase;
     opticCounts.hostEnd = hOptHostBase;
 
-    if (e2aBundle < 1 || a2sBundle < 1) {
-      const badBundle = e2aBundle < 1 ? 'edge-to-agg (' + e2aBundle.toFixed(2) + ')' : 'agg-to-spine (' + a2sBundle.toFixed(2) + ')';
-      const minCombo = minBalanced3Tier(linksPerPlane, breakout, oversub);
-      let suggestion = '';
-      if (minCombo) suggestion = ' Minimum balanced topology: leaf <strong>' + minCombo.leaf.desc + '</strong>, spine <strong>' + minCombo.spine.desc + '</strong>.';
-      el.innerHTML = '<div class="error-msg">Invalid topology: ' + badBundle + ' bundle size is below 1.' +
-        ' The selected platforms cannot support this cluster size.' + suggestion + '</div>';
+    // Validate spine capacity: each spine needs at least pods ports
+    if (pods > spineRadix) {
+      el.innerHTML = '<div class="error-msg">Too many pods (' + pods + ') for spine radix (' + spineRadix + '). Each spine must connect to at least 1 agg per pod. Use a larger spine switch or reduce cluster size.</div>';
       return;
-    }
-
-    if (!Number.isInteger(e2aBundle) || !Number.isInteger(a2sBundle)) {
-      const minCombo = minBalanced3Tier(linksPerPlane, breakout, oversub);
-      let suggestion = '';
-      if (minCombo) suggestion = ' Minimum balanced topology: leaf <strong>' + minCombo.leaf.desc + '</strong>, spine <strong>' + minCombo.spine.desc + '</strong>.';
-      if (!Number.isInteger(e2aBundle)) {
-        warnHtml += '<div class="warn-box">Edge-to-agg uplinks (' + e2aBundle.toFixed(2) + ') do not divide evenly — this topology is unbalanced at the aggregation layer.' + suggestion + ' Enable <strong>Balance topology</strong> to auto-adjust.</div>';
-      }
-      if (!Number.isInteger(a2sBundle)) {
-        warnHtml += '<div class="warn-box">Agg-to-spine uplinks (' + a2sBundle.toFixed(2) + ') do not divide evenly — this topology is unbalanced at the spine layer.' + suggestion + ' Enable <strong>Balance topology</strong> to auto-adjust.</div>';
-      }
     }
 
     switchHtml  = mkSection(iconServer(), 'Spine layer', [
@@ -1872,8 +1842,7 @@ function calculate() {
       ['Edge leaf per plane', leaf2PerPlane], ['Total edge leaves', totalLeaf2],
       ['Host links per edge', Math.ceil(linksPerPlane / leaf2PerPlane) + (breakout > 1 ? ` (via ${breakout}:1)` : '')],
       ['Links per agg leaf (bundle)', e2aBundleStr],
-    ], 'Three-tier Clos scale-out topology.');
-    if (balance3Note) switchHtml += '<div class="note-box" style="margin-bottom:12px">' + balance3Note + '</div>';
+    ], 'Three-tier Clos: ' + pods + (pods === 1 ? ' pod' : ' pods') + ' per plane, ' + edgeLeavesPerPod + ' edge leaves + ' + aggPerPod + ' agg switches per pod.');
 
     let optRows = [
       ['Agg leaf ↔ spine links', fmtN(a2sLinks)],
@@ -2030,6 +1999,9 @@ function calculate() {
       const subRatio = physDownlinks / uplinks;
       out += metric(subRatio === 1 ? '1:1' : subRatio.toFixed(2) + ':1', 'Subscription', 'down:up port ratio');
     }
+    if (tierNum === 3) {
+      out += metric(fmtN(pods * planes), 'Pods', pods + ' per plane');
+    }
   }
   out += '</div>';
 
@@ -2038,13 +2010,14 @@ function calculate() {
     out += '<div class="mrc-box">';
     out += '<div class="mrc-title"><strong>MRC Multi-Plane Design</strong> — ' + planes + ' planes × ' + perPlaneSpeed + 'G per link</div>';
     out += '<div class="mrc-details">';
-    out += '<span>Each plane is an independent two-tier fabric</span>';
+    const tierDesc = tierNum === 3 ? 'three-tier' : tierNum === 4 ? 'DES' : 'two-tier';
+    out += '<span>Each plane is an independent ' + tierDesc + ' fabric</span>';
     out += '<span>NICs spray packets across all ' + planes + ' planes</span>';
     out += '</div>';
     out += '<div class="mrc-benefits">';
     out += '<span class="mrc-benefit">Path diversity (' + planes + '× paths)</span>';
     out += '<span class="mrc-benefit">Plane-level fault tolerance</span>';
-    out += '<span class="mrc-benefit">Two-tier simplicity per plane</span>';
+    out += '<span class="mrc-benefit">' + (tierNum === 3 ? 'Pod-based scale-out per plane' : tierNum === 4 ? 'DES simplicity per plane' : 'Two-tier simplicity per plane') + '</span>';
     out += '<span class="mrc-benefit">Smaller radix switches</span>';
     out += '</div>';
     out += '</div>';
