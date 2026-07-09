@@ -815,6 +815,14 @@
               <div class="hint">1 = non-blocking</div>
             </div>
           </div>
+          <div class="field" id="nic-breakout-row" style="display:none">
+            <label>Multi-plane mode</label>
+            <span class="optic-toggle" style="margin-left:0">
+              <button type="button" class="optic-toggle-btn active" id="nic-mode-dist" onclick="setNicBreakout(false)">Distribute</button>
+              <button type="button" class="optic-toggle-btn" id="nic-mode-brk" onclick="setNicBreakout(true)">NIC Breakout</button>
+            </span>
+            <div class="hint" id="nic-breakout-hint">GPUs split across planes at full speed</div>
+          </div>
           <div class="field" id="balance-row">
             <label>Balance topology</label>
             <select id="balance-topo" onchange="clearResults()">
@@ -1029,6 +1037,8 @@ function resetInputs() {
   document.getElementById('breakout').value = 2;
   document.getElementById('spine-speed').value = 800;
   document.getElementById('host-speed').value = 400;
+  setNicBreakout(false);
+  document.getElementById('nic-breakout-row').style.display = 'none';
   document.getElementById('leaf-radix-custom').style.display = 'none';
   document.getElementById('spine-radix-custom').style.display = 'none';
   populateDropdowns();
@@ -1117,6 +1127,14 @@ function autoSelectPlatforms() {
   const linksPerGpu = parseInt(document.getElementById('links-per-gpu').value) || 1;
   const planes      = parseInt(document.getElementById('planes').value) || 1;
   const breakout    = parseInt(document.getElementById('breakout').value) || 1;
+
+  const nicBreakoutRow = document.getElementById('nic-breakout-row');
+  if (linksPerGpu < planes && planes > 1) {
+    nicBreakoutRow.style.display = 'block';
+  } else {
+    nicBreakoutRow.style.display = 'none';
+    setNicBreakout(false);
+  }
 
   const hosts = numNodes || Math.ceil(totalGPUs / gpusPerNode);
   const gpus  = totalGPUs || hosts * gpusPerNode;
@@ -1394,6 +1412,19 @@ function syncBreakout() {
   syncSpineSpeed();
 }
 
+function setNicBreakout(enabled) {
+  document.getElementById('nic-mode-dist').className = 'optic-toggle-btn' + (enabled ? '' : ' active');
+  document.getElementById('nic-mode-brk').className = 'optic-toggle-btn' + (enabled ? ' active' : '');
+  document.getElementById('nic-breakout-hint').textContent = enabled
+    ? 'Each NIC breaks out across all planes at reduced speed'
+    : 'GPUs split across planes at full speed';
+  clearResults();
+}
+
+function isNicBreakoutEnabled() {
+  return document.getElementById('nic-mode-brk')?.classList.contains('active') || false;
+}
+
 function syncSpineSpeed() {
   const breakout = parseInt(document.getElementById('breakout').value) || 1;
   const spineSpeedSelect = document.getElementById('spine-speed');
@@ -1535,7 +1566,8 @@ function calculate() {
 
   const totalHostLinks = gpus * linksPerGpu;
   const linksPerPlane  = Math.ceil(totalHostLinks / planes);
-  const hostSpeedPerPlane = (planes > 1 && linksPerGpu < planes)
+  const nicBreakoutEnabled = isNicBreakoutEnabled();
+  const hostSpeedPerPlane = (nicBreakoutEnabled && planes > 1 && linksPerGpu < planes)
     ? (hostSpeed * linksPerGpu / planes) : hostSpeed;
 
   const physDownlinks  = Math.floor(leafRadix * oversub / (1 + oversub));
@@ -1580,7 +1612,7 @@ function calculate() {
   let totalSpine = 0, totalLeaf = 0, pods = 0;
 
   const linksPerNode = gpusPerNode * linksPerGpu;
-  const nicBreakout = planes > 1 && linksPerGpu < planes;
+  const nicBreakout = nicBreakoutEnabled && planes > 1 && linksPerGpu < planes;
   const linksPerNodePerPlane = nicBreakout ? linksPerNode : (planes > 1 ? Math.ceil(linksPerNode / planes) : linksPerNode);
   const hostLinkStr = `${linksPerNodePerPlane}× ${hostSpeedPerPlane}G links` + (breakout > 1 ? ` (into ${linksPerNodePerPlane/breakout}× switch ports)` : '');
   const diagTitle = 'Logical Data Path (Single Node Slice' + (planes > 1 ? ` · ${planes} Planes` : '') + ')';
@@ -2063,10 +2095,10 @@ function calculate() {
   out += metric(fmtN(gpus),          'Total GPUs',     '');
   out += metric(fmtN(totalHostLinks),'Backend Links',   linksPerGpu + ' per GPU', 'Total backend network links. Each GPU connects to the fabric with ' + linksPerGpu + ' link(s)');
   if (planes > 1) {
-    const bwPerPlane = hostSpeed * linksPerGpu / planes;
+    const bwPerPlane = nicBreakout ? (hostSpeed * linksPerGpu / planes) : hostSpeedPerPlane;
     const bwTotal = hostSpeed * linksPerGpu;
     const bwPlaneStr = Number.isInteger(bwPerPlane) ? bwPerPlane + 'G' : bwPerPlane.toFixed(1) + 'G';
-    out += metric(bwPlaneStr, 'BW / GPU / Plane', linksPerGpu + ' links ÷ ' + planes + ' planes', 'Bandwidth each GPU gets per plane. Total GPU bandwidth is split across ' + planes + ' planes');
+    out += metric(bwPlaneStr, 'BW / GPU / Plane', nicBreakout ? (linksPerGpu + ' links ÷ ' + planes + ' planes') : ('1 link @ ' + hostSpeedPerPlane + 'G'), nicBreakout ? 'Each NIC breaks out across ' + planes + ' planes at reduced speed' : 'Each GPU connects to one plane at full speed. GPUs distributed across planes');
     out += metric(bwTotal + 'G', 'Aggregate BW / GPU', planes + ' planes × ' + bwPlaneStr, 'Total bandwidth per GPU across all planes combined');
   }
   if (tierNum === 4) {
