@@ -904,6 +904,8 @@
       </span>
       <button class="topo-btn" onclick="renderTopology()" title="Redraw">Redraw</button>
       <button class="topo-btn" onclick="fitTopology()" title="Fit to view">Fit</button>
+      <button class="topo-btn" onclick="exportTopoPNG()" title="Export as PNG">PNG</button>
+      <button class="topo-btn" onclick="exportTopoSVG()" title="Export as SVG">SVG</button>
       <button class="topo-btn" onclick="closeTopoModal()" title="Close">&#x2715;</button>
     </div>
     <div style="padding:4px 16px;font-size:11px;opacity:0.5;color:var(--text2)">Click two compute nodes to trace traffic path · Double-click to expand GPU/NIC detail · Scroll to zoom · Drag to pan</div>
@@ -3714,6 +3716,65 @@ function fitTopology() {
   );
 }
 
+function exportTopoSVG() {
+  if (!d3Svg) return;
+  const svgEl = d3Svg.node().cloneNode(true);
+  const bbox = d3Svg.select('.topo-canvas').node().getBBox();
+  const pad = 40;
+  svgEl.setAttribute('viewBox', (bbox.x - pad) + ' ' + (bbox.y - pad) + ' ' + (bbox.width + pad * 2) + ' ' + (bbox.height + pad * 2));
+  svgEl.setAttribute('width', bbox.width + pad * 2);
+  svgEl.setAttribute('height', bbox.height + pad * 2);
+  svgEl.querySelector('.topo-canvas')?.removeAttribute('transform');
+  const styles = getComputedStyle(document.documentElement);
+  const bg = styles.getPropertyValue('--bg').trim() || '#fff';
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', bbox.x - pad); rect.setAttribute('y', bbox.y - pad);
+  rect.setAttribute('width', bbox.width + pad * 2); rect.setAttribute('height', bbox.height + pad * 2);
+  rect.setAttribute('fill', bg);
+  svgEl.insertBefore(rect, svgEl.firstChild);
+  const blob = new Blob([new XMLSerializer().serializeToString(svgEl)], { type: 'image/svg+xml' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'topology.svg';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function exportTopoPNG() {
+  if (!d3Svg) return;
+  const svgEl = d3Svg.node().cloneNode(true);
+  const bbox = d3Svg.select('.topo-canvas').node().getBBox();
+  const pad = 40;
+  const w = Math.round(bbox.width + pad * 2);
+  const h = Math.round(bbox.height + pad * 2);
+  svgEl.setAttribute('viewBox', (bbox.x - pad) + ' ' + (bbox.y - pad) + ' ' + w + ' ' + h);
+  svgEl.setAttribute('width', w * 2);
+  svgEl.setAttribute('height', h * 2);
+  svgEl.querySelector('.topo-canvas')?.removeAttribute('transform');
+  const styles = getComputedStyle(document.documentElement);
+  const bg = styles.getPropertyValue('--bg').trim() || '#fff';
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', bbox.x - pad); rect.setAttribute('y', bbox.y - pad);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('fill', bg);
+  svgEl.insertBefore(rect, svgEl.firstChild);
+  const xml = new XMLSerializer().serializeToString(svgEl);
+  const img = new Image();
+  img.onload = function() {
+    const canvas = document.createElement('canvas');
+    canvas.width = w * 2; canvas.height = h * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    canvas.toBlob(function(blob) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'topology.png';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }, 'image/png');
+  };
+  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
+}
 
 </script>
 </body>
