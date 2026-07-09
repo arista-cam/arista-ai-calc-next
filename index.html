@@ -654,6 +654,14 @@
     padding: 8px 10px; font-size: 12px; color: var(--text);
     max-width: 240px; z-index: 1001; line-height: 1.5;
   }
+  .flow-select-ring {
+    animation: flow-ring-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes flow-ring-pulse {
+    0%, 100% { stroke-opacity: 0.8; }
+    50% { stroke-opacity: 0.3; }
+  }
+
   .view-topo-btn {
     display: inline-flex; align-items: center; gap: 6px;
     margin-top: 12px; padding: 8px 18px;
@@ -898,7 +906,7 @@
       <button class="topo-btn" onclick="fitTopology()" title="Fit to view">Fit</button>
       <button class="topo-btn" onclick="closeTopoModal()" title="Close">&#x2715;</button>
     </div>
-    <div style="padding:4px 16px;font-size:11px;opacity:0.5;color:var(--text2)">Hover nodes for details · Click a compute node to expand GPU/NIC connections · Scroll to zoom · Drag to pan</div>
+    <div style="padding:4px 16px;font-size:11px;opacity:0.5;color:var(--text2)">Click two compute nodes to trace traffic path · Double-click to expand GPU/NIC detail · Scroll to zoom · Drag to pan</div>
     <div id="cy-container"></div>
   </div>
 </div>
@@ -2255,6 +2263,11 @@ let d3Svg = null;
 let d3Zoom = null;
 let expandedHostId = null;
 let nicOverlayGroup = null;
+let flowSourceId = null;
+let flowTargetId = null;
+let flowOverlayGroup = null;
+let flowInfoGroup = null;
+let flowAnimTimer = null;
 
 const RAIL_COLORS = [
   '#2ecc71', '#3498db', '#e74c3c', '#1abc9c',
@@ -2817,6 +2830,11 @@ function renderTopology() {
   container.innerHTML = '';
   expandedHostId = null;
   nicOverlayGroup = null;
+  flowSourceId = null;
+  flowTargetId = null;
+  if (flowOverlayGroup) { flowOverlayGroup.remove(); flowOverlayGroup = null; }
+  if (flowInfoGroup) { flowInfoGroup.remove(); flowInfoGroup = null; }
+  if (flowAnimTimer) { flowAnimTimer.stop(); flowAnimTimer = null; }
 
   const data = buildTopoData();
   const posLookup = {};
@@ -3139,6 +3157,207 @@ function renderTopology() {
     annotGroup.transition().duration(300).style('opacity', 1);
   }
 
+  // ── Flow visualization ──
+  function findPath(sourceId, targetId) {
+    const visited = new Set([sourceId]);
+    const queue = [[sourceId, [sourceId]]];
+    while (queue.length > 0) {
+      const [current, path] = queue.shift();
+      if (current === targetId) return path;
+      for (const neighbor of (adj[current] || [])) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push([neighbor, [...path, neighbor]]);
+        }
+      }
+    }
+    return null;
+  }
+
+  function classifyPath(path) {
+    const tiers = path.map(id => tierById[id]);
+    const hops = path.length - 1;
+    const hasSpine = tiers.includes('spine');
+    const hasAgg = tiers.includes('aggLeaf');
+
+    let type, label, color;
+    if (hops <= 2 && !hasSpine) {
+      type = 'intra-rail'; label = 'Intra-Rail'; color = '#2ecc71';
+    } else if (hasSpine && !hasAgg) {
+      type = 'inter-rail'; label = 'Inter-Rail'; color = '#e67e22';
+    } else if (hasAgg && !hasSpine) {
+      type = 'intra-pod'; label = 'Intra-Pod'; color = '#e67e22';
+    } else if (hasAgg && hasSpine) {
+      type = 'inter-pod'; label = 'Inter-Pod'; color = '#e74c3c';
+    } else {
+      type = 'multi-hop'; label = 'Multi-Hop'; color = '#e67e22';
+    }
+
+    const info = { type, label, hops, color };
+    if (isMRC) {
+      const pathPlanes = path.map(id => planeById[id]).filter(p => p >= 0);
+      const unique = [...new Set(pathPlanes)];
+      if (unique.length === 1) {
+        info.plane = unique[0];
+        info.planeLabel = 'Plane ' + (unique[0] + 1);
+        info.color = RAIL_COLORS[unique[0] % 16];
+      }
+    }
+    return info;
+  }
+
+  function showSelectionRing(nodeId) {
+    nodeGs.each(function(d) {
+      if (d.id === nodeId) {
+        const el = d3.select(this);
+        const rect = el.select('rect');
+        const w = parseFloat(rect.attr('width'));
+        const h = parseFloat(rect.attr('height'));
+        const cx = parseFloat(rect.attr('x')) + w / 2;
+        const cy = parseFloat(rect.attr('y')) + h / 2;
+        const r = Math.max(w, h) / 2 + 8;
+        el.insert('circle', 'rect')
+          .attr('class', 'flow-select-ring')
+          .attr('cx', cx).attr('cy', cy)
+          .attr('r', 0)
+          .attr('fill', 'none')
+          .attr('stroke', '#2ecc71')
+          .attr('stroke-width', 2.5)
+          .attr('stroke-dasharray', '6 3')
+          .transition().duration(300)
+          .attr('r', r);
+      }
+    });
+  }
+
+  function dimForSelection() {
+    nodeGs.transition().duration(200)
+      .style('opacity', d => d.tier === 'host' ? 1 : 0.35);
+    edgeLines.transition().duration(200).style('opacity', 0.12);
+    tierLabelGroup.transition().duration(200).style('opacity', 0.15);
+    annotGroup.transition().duration(200).style('opacity', 0.15);
+  }
+
+  function showFlowPath(path, info) {
+    flowOverlayGroup = g.insert('g', '.topo-nodes').attr('class', 'flow-path-layer');
+    flowInfoGroup = g.append('g').attr('class', 'flow-info');
+
+    nodeGs.transition().duration(200)
+      .style('opacity', d => path.includes(d.id) ? 1 : 0.08);
+    edgeLines.transition().duration(200).style('opacity', 0.04);
+    tierLabelGroup.transition().duration(200).style('opacity', 0.15);
+    annotGroup.transition().duration(200).style('opacity', 0.15);
+
+    const color = info.color;
+    for (let i = 0; i < path.length - 1; i++) {
+      const src = posLookup[path[i]];
+      const tgt = posLookup[path[i + 1]];
+      flowOverlayGroup.append('line')
+        .attr('x1', src.x).attr('y1', src.y)
+        .attr('x2', src.x).attr('y2', src.y)
+        .attr('stroke', color).attr('stroke-width', 4)
+        .attr('stroke-linecap', 'round').attr('stroke-opacity', 0.85)
+        .transition().duration(300).delay(i * 150)
+        .attr('x2', tgt.x).attr('y2', tgt.y);
+
+      const mx = (src.x + tgt.x) / 2;
+      const my = (src.y + tgt.y) / 2;
+      flowOverlayGroup.append('circle')
+        .attr('cx', mx).attr('cy', my).attr('r', 10)
+        .attr('fill', color).style('opacity', 0)
+        .transition().duration(200).delay(i * 150 + 200).style('opacity', 0.9);
+      flowOverlayGroup.append('text')
+        .attr('x', mx).attr('y', my).attr('dy', '0.35em')
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#fff').attr('font-size', 9).attr('font-weight', 700)
+        .text(i + 1).style('opacity', 0)
+        .transition().duration(200).delay(i * 150 + 200).style('opacity', 1);
+    }
+
+    path.forEach(nodeId => {
+      nodeGs.each(function(d) {
+        if (d.id === nodeId) {
+          d3.select(this).select('rect')
+            .transition().duration(200)
+            .attr('stroke', color).attr('stroke-width', 3);
+        }
+      });
+    });
+
+    showPathInfo(path, info, color);
+    startFlowAnimation(path, color);
+  }
+
+  function showPathInfo(path, info, color) {
+    const pathNodes = data.nodes.filter(n => path.includes(n.id));
+    const xs = pathNodes.map(n => n.pos.x);
+    const ys = pathNodes.map(n => n.pos.y);
+    const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const bottomY = Math.max(...ys) + 80;
+
+    const ig = flowInfoGroup.append('g')
+      .attr('transform', 'translate(' + centerX + ',' + bottomY + ')')
+      .style('opacity', 0);
+
+    const nodeLabels = path.map(id => {
+      const n = data.nodes.find(n => n.id === id);
+      return n ? n.label.split('\n')[0] : id;
+    });
+    const lines = [
+      info.label + ' — ' + info.hops + ' hop' + (info.hops !== 1 ? 's' : ''),
+      nodeLabels.join('  →  ')
+    ];
+    if (info.planeLabel) lines.push('via ' + info.planeLabel);
+
+    const lineH = 18;
+    const totalH = lines.length * lineH + 16;
+    const w = Math.max(260, lines[1].length * 7 + 40);
+
+    ig.append('rect')
+      .attr('x', -w / 2).attr('y', -totalH / 2)
+      .attr('width', w).attr('height', totalH)
+      .attr('rx', 10)
+      .attr('fill', isDark ? '#1a1a2e' : '#fff').attr('fill-opacity', 0.95)
+      .attr('stroke', color).attr('stroke-width', 1.5);
+
+    lines.forEach((line, i) => {
+      ig.append('text')
+        .attr('x', 0).attr('y', -totalH / 2 + 16 + i * lineH)
+        .attr('text-anchor', 'middle')
+        .attr('fill', i === 0 ? color : (isDark ? '#aaa' : '#666'))
+        .attr('font-size', i === 0 ? 13 : 10)
+        .attr('font-weight', i === 0 ? 700 : 500)
+        .text(line);
+    });
+
+    ig.transition().duration(400).delay(path.length * 150).style('opacity', 1);
+  }
+
+  function startFlowAnimation(path, color) {
+    const spawnDelay = Math.max(600, path.length * 300);
+    flowAnimTimer = d3.interval(function() {
+      const dot = flowOverlayGroup.append('circle')
+        .attr('r', 5).attr('fill', color).attr('opacity', 0.9)
+        .attr('cx', posLookup[path[0]].x).attr('cy', posLookup[path[0]].y);
+      let t = dot;
+      for (let i = 1; i < path.length; i++) {
+        const p = posLookup[path[i]];
+        t = t.transition().duration(400).ease(d3.easeLinear).attr('cx', p.x).attr('cy', p.y);
+      }
+      t.transition().duration(200).attr('opacity', 0).remove();
+    }, spawnDelay);
+  }
+
+  function clearFlowOverlay() {
+    flowSourceId = null;
+    flowTargetId = null;
+    if (flowAnimTimer) { flowAnimTimer.stop(); flowAnimTimer = null; }
+    if (flowOverlayGroup) { flowOverlayGroup.remove(); flowOverlayGroup = null; }
+    if (flowInfoGroup) { flowInfoGroup.remove(); flowInfoGroup = null; }
+    nodeGs.selectAll('.flow-select-ring').remove();
+    unhighlight();
+  }
+
   function collapseNICs(instant) {
     if (!expandedHostId) return;
     const prevId = expandedHostId;
@@ -3428,16 +3647,46 @@ function renderTopology() {
   edgeLines.on('mouseleave', () => { tooltip.style.display = 'none'; });
 
   nodeGs.on('click', function(event, d) {
+    if (d.tier === 'ellipsis') return;
+    event.stopPropagation();
+    if (d.tier !== 'host') return;
+
+    if (flowSourceId && flowTargetId) {
+      clearFlowOverlay();
+    } else if (flowSourceId === d.id) {
+      clearFlowOverlay();
+    } else if (flowSourceId) {
+      flowTargetId = d.id;
+      if (expandedHostId) collapseNICs(true);
+      const path = findPath(flowSourceId, flowTargetId);
+      if (path) {
+        const info = classifyPath(path);
+        showFlowPath(path, info);
+      }
+    } else {
+      if (expandedHostId) collapseNICs(true);
+      flowSourceId = d.id;
+      showSelectionRing(d.id);
+      dimForSelection();
+    }
+  });
+
+  nodeGs.on('dblclick', function(event, d) {
     if (d.tier === 'host') {
       event.stopPropagation();
+      clearFlowOverlay();
       expandNICs(d);
     }
   });
 
   svg.on('click', function(event) {
     if (event.target === this || event.target === g.node()) {
-      collapseNICs();
-      unhighlight();
+      if (flowSourceId || flowTargetId) {
+        clearFlowOverlay();
+      } else {
+        collapseNICs();
+        unhighlight();
+      }
     }
   });
 
