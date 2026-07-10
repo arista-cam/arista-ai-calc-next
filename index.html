@@ -523,6 +523,10 @@
   .mrc-compare-card .stat-value { font-weight: 600; color: var(--text); font-size: 13px; }
   .mrc-compare-card .stat-note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.4; }
   .mrc-compare-card .exceeds-warning { color: var(--coral600); font-size: 11px; margin-top: 6px; font-weight: 500; }
+  .advantage-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .advantage-badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .advantage-badge-good { background: var(--teal50); color: var(--teal800); }
+  .advantage-badge-warn { background: var(--coral50); color: var(--coral800); }
   @media (max-width: 640px) { .mrc-comparison { grid-template-columns: 1fr; } }
 
   .optic-toggle, .power-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-left: 12px; vertical-align: middle; }
@@ -984,6 +988,7 @@
     <div class="changelog-body">
       <h3>v1.3 — July 2025</h3>
       <ul>
+        <li><strong>Modular Spine Advantage</strong> — side-by-side comparison of modular 7800R4 chassis vs all-fixed designs showing platforms, rack space (RU), optics, and power with per-row highlighting and recommendation notes</li>
         <li><strong>GPU / NIC selection</strong> — choose from NVIDIA (GB300, GB200, B300, B200, H200, H100) and AMD (MI350X, MI325X, MI300X) with auto-configured NIC and link speed</li>
         <li><strong>Training / Inference toggle</strong> — workload-aware guidance for fabric design (E-W vs N-S traffic patterns)</li>
         <li><strong>FRO / LPO optics</strong> — renamed from Conventional, added annual OpEx savings estimate and CapEx guidance for 800G modules</li>
@@ -1092,12 +1097,12 @@ const DES_POWER = {
 };
 
 const PLATFORMS = [
-  { name: '7060X6',        radix: 32,  type: 'fixed',   desc: '7060X6 (32-port)',  powerTyp: 320, powerMax: 600 },
-  { name: '7060X6',        radix: 64,  type: 'fixed',   desc: '7060X6 (64-port)',  powerTyp: 640, powerMax: 1194 },
-  { name: '7800R4 4-slot', radix: 144, type: 'chassis', desc: '7800R4 4-slot (144-port)',  slots: 4,  portsPerSlot: 36, powerTyp: 4500, powerMax: 6801 },
-  { name: '7800R4 8-slot', radix: 288, type: 'chassis', desc: '7800R4 8-slot (288-port)',  slots: 8,  portsPerSlot: 36, powerTyp: 9000, powerMax: 14139 },
-  { name: '7800R4 12-slot',radix: 432, type: 'chassis', desc: '7800R4 12-slot (432-port)', slots: 12, portsPerSlot: 36, powerTyp: 13500, powerMax: 22394 },
-  { name: '7800R4 16-slot',radix: 576, type: 'chassis', desc: '7800R4 16-slot (576-port)', slots: 16, portsPerSlot: 36, powerTyp: 18000, powerMax: 28074 },
+  { name: '7060X6',        radix: 32,  type: 'fixed',   desc: '7060X6 (32-port)',  powerTyp: 320, powerMax: 600, ru: 1 },
+  { name: '7060X6',        radix: 64,  type: 'fixed',   desc: '7060X6 (64-port)',  powerTyp: 640, powerMax: 1194, ru: 2 },
+  { name: '7800R4 4-slot', radix: 144, type: 'chassis', desc: '7800R4 4-slot (144-port)',  slots: 4,  portsPerSlot: 36, powerTyp: 4500, powerMax: 6801, ru: 10 },
+  { name: '7800R4 8-slot', radix: 288, type: 'chassis', desc: '7800R4 8-slot (288-port)',  slots: 8,  portsPerSlot: 36, powerTyp: 9000, powerMax: 14139, ru: 16 },
+  { name: '7800R4 12-slot',radix: 432, type: 'chassis', desc: '7800R4 12-slot (432-port)', slots: 12, portsPerSlot: 36, powerTyp: 13500, powerMax: 22394, ru: 23 },
+  { name: '7800R4 16-slot',radix: 576, type: 'chassis', desc: '7800R4 16-slot (576-port)', slots: 16, portsPerSlot: 36, powerTyp: 18000, powerMax: 28074, ru: 32 },
 ];
 
 const GPU_MODELS = [
@@ -2396,6 +2401,166 @@ function calculate() {
       out += '<div class="stat-row"><span class="stat-label">Total switches' + tip('Total switches across all ' + planes + ' planes combined') + '</span><span class="stat-value">' + fmtN(mpTotalSw) + ' (' + planes + '×' + fmtN(mpLeafPP + mpSpinePP) + ')</span></div>';
       out += '<div class="stat-row"><span class="stat-label">Max scale' + tip('Maximum GPUs across all planes: per-plane capacity × number of planes') + '</span><span class="stat-value">' + fmtN(maxGpusTotal) + ' GPUs</span></div>';
       out += '<div class="stat-note">Packet spraying across ' + planes + ' independent fabrics — plane-level fault isolation, ' + planes + '× path diversity</div>';
+      out += '</div>';
+
+      out += '</div>';
+    }
+  }
+
+  // Modular vs Fixed comparison
+  if ((tierNum >= 1 && tierNum <= 3) && spinePlatform && leafPlatform !== undefined && spinePlatform.type !== 'custom' && (!leafPlatform || leafPlatform.type !== 'custom')) {
+    const isCurrentModular = spinePlatform.type === 'chassis';
+    const totalOpticsCurrent = opticCounts.spine + opticCounts.hostSwitch + opticCounts.hostEnd + opticCounts.fabric;
+    const currentRU = totalSpine * (spinePlatform.ru || 1) + totalLeaf * (leafPlatform?.ru || 1);
+
+    function calcAltDesign(sp, lf, tier) {
+      const lRadix = lf.radix;
+      const sRadix = sp.radix;
+      const pDown = Math.floor(lRadix * oversub / (1 + oversub));
+      const eDown = pDown * breakout;
+      const up = lRadix - pDown;
+      const ulB = spineSpeed < 800 ? Math.round(800 / spineSpeed) : 1;
+      const eUp = up * ulB;
+      const eSR = sRadix * ulB;
+      if (eDown <= 0) return null;
+      const lPP = Math.ceil(linksPerPlane / eDown);
+
+      if (tier === 1) {
+        const portsNeeded = Math.ceil(linksPerPlane / breakout);
+        if (portsNeeded > sRadix) return null;
+        const tSpine = planes;
+        const hOpt = Math.ceil(totalHostLinks / breakout) + totalHostLinks;
+        const swPow = tSpine * (sp.powerMax || 0);
+        const optPow = hOpt * (OPTIC_POWER[hostSpeedPerPlane]?.lpo || 10);
+        return { tier: 1, leaf: 0, spine: tSpine, total: tSpine, optics: hOpt,
+          ru: tSpine * (sp.ru || 1), power: Math.round((swPow + optPow) / 1000 * 0.8),
+          maxScale: sRadix * breakout * planes / linksPerGpu, spName: sp.desc, lfName: '' };
+      }
+      if (tier === 2) {
+        const sPP = Math.ceil((lPP * eUp) / eSR);
+        const tLeaf = lPP * planes;
+        const tSpine = sPP * planes;
+        const spPhys = uplinkBreakout > 1 ? Math.ceil(lPP * eUp * planes / uplinkBreakout) : lPP * eUp * planes;
+        const spOpt = spPhys * 2;
+        const hOpt = Math.ceil(totalHostLinks / breakout) + totalHostLinks;
+        const totalOpt = spOpt + hOpt;
+        const swPow = tSpine * (sp.powerMax || 0) + tLeaf * (lf.powerMax || 0);
+        const optPow = spOpt * (OPTIC_POWER[800]?.lpo || 8) + hOpt * (OPTIC_POWER[hostSpeedPerPlane]?.lpo || 10);
+        const maxScale = Math.floor(eSR * eDown / linksPerGpu) * planes;
+        return { tier: 2, leaf: tLeaf, spine: tSpine, total: tLeaf + tSpine, optics: totalOpt,
+          ru: tSpine * (sp.ru || 1) + tLeaf * (lf.ru || 1), power: Math.round((swPow + optPow) / 1000 * 0.8),
+          maxScale, spName: sp.desc, lfName: lf.desc };
+      }
+      const eLPP = pDown;
+      const aggPP = up;
+      const podCount = Math.ceil(lPP / eLPP);
+      const l1PP = podCount * aggPP;
+      const aggUp = l1PP * eUp;
+      const sPP = Math.ceil(aggUp / eSR);
+      const tEdge = lPP * planes, tAgg = l1PP * planes, tSpine = sPP * planes;
+      const a2s = (uplinkBreakout > 1 ? Math.ceil(l1PP * eUp * planes / uplinkBreakout) : l1PP * eUp * planes) * 2;
+      const e2a = lPP * up * planes * 2;
+      const hOpt = Math.ceil(totalHostLinks / breakout) + totalHostLinks;
+      const totalOpt = a2s + e2a + hOpt;
+      const swPow = tSpine * (sp.powerMax || 0) + (tEdge + tAgg) * (lf.powerMax || 0);
+      const optPow = (a2s + e2a) * (OPTIC_POWER[800]?.lpo || 8) + hOpt * (OPTIC_POWER[hostSpeedPerPlane]?.lpo || 10);
+      return { tier: 3, leaf: tEdge, agg: tAgg, spine: tSpine, total: tEdge + tAgg + tSpine,
+        optics: totalOpt, ru: tSpine * (sp.ru || 1) + (tEdge + tAgg) * (lf.ru || 1),
+        power: Math.round((swPow + optPow) / 1000 * 0.8), maxScale: 0, spName: sp.desc, lfName: lf.desc };
+    }
+
+    const curSwMaxW = tierNum === 4
+      ? totalLeaf * DES_POWER.leaf.max + totalSpine * DES_POWER.spine.max
+      : totalSpine * (spinePlatform?.powerMax || 0) + totalLeaf * (leafPlatform?.powerMax || 0);
+    const curPowerW = (opticCounts.spine + opticCounts.fabric) * (OPTIC_POWER[800]?.lpo || 8)
+      + (opticCounts.hostSwitch + opticCounts.hostEnd) * (OPTIC_POWER[hostSpeedPerPlane]?.lpo || 10)
+      + Math.round(curSwMaxW * 0.8);
+    const curPower = Math.round(curPowerW / 1000);
+    const cur = { tier: tierNum, total: totalSwitches, optics: totalOpticsCurrent, ru: currentRU, power: curPower };
+
+    let alt = null, altLabel = '', curLabel = '';
+
+    if (isCurrentModular) {
+      const fixedSpine = LEAF_PLATFORMS[LEAF_PLATFORMS.length - 1];
+      alt = calcAltDesign(fixedSpine, leafPlatform || fixedSpine, tierNum === 1 ? 2 : tierNum);
+      if (alt && alt.maxScale < gpus && (tierNum === 1 || tierNum === 2)) {
+        alt = calcAltDesign(fixedSpine, leafPlatform || fixedSpine, 3);
+        altLabel = '3-Tier All-Fixed';
+      } else {
+        altLabel = tierNum === 1 ? 'All-Fixed 2-Tier' : 'All-Fixed Spine';
+      }
+      curLabel = tierNum === 1 ? 'Your Design: Collapsed Modular' : 'Your Design: Modular Spine';
+    } else {
+      const chassis = PLATFORMS.filter(p => p.type === 'chassis');
+      const canSingleTier = chassis.some(ch => Math.ceil(linksPerPlane / breakout) <= ch.radix);
+      if (canSingleTier && tierNum >= 2) {
+        for (const ch of chassis) {
+          const d = calcAltDesign(ch, leafPlatform, 1);
+          if (d) { alt = d; break; }
+        }
+        if (alt) altLabel = 'Single-Tier Modular (' + alt.spName + ')';
+      }
+      if (!alt) {
+        for (const ch of chassis) {
+          const d = calcAltDesign(ch, leafPlatform, 2);
+          if (d && d.maxScale >= gpus) { alt = d; break; }
+        }
+        if (!alt && chassis.length > 0) alt = calcAltDesign(chassis[chassis.length - 1], leafPlatform, 2);
+        if (alt) altLabel = '2-Tier Modular (' + alt.spName + ')';
+      }
+      curLabel = tierNum === 3 ? 'Your Design: 3-Tier All-Fixed' : 'Your Design: All-Fixed';
+    }
+
+    if (alt) {
+      const modular = isCurrentModular ? cur : alt;
+      const fixed = isCurrentModular ? alt : cur;
+
+      function compRow(label, fixedVal, modVal, unit, savingsLabel) {
+        const fStr = fmtN(fixedVal) + (unit ? ' ' + unit : '');
+        const mStr = fmtN(modVal) + (unit ? ' ' + unit : '');
+        const modWins = modVal < fixedVal;
+        const fixWins = fixedVal < modVal;
+        const pct = fixedVal > 0 ? Math.round((1 - modVal / fixedVal) * 100) : 0;
+        const fStyle = fixWins ? 'color:var(--teal600);font-weight:700' : '';
+        const mStyle = modWins ? 'color:var(--teal600);font-weight:700' : '';
+        const mBadge = modWins && pct > 0 ? ' <span class="advantage-badge advantage-badge-good" style="font-size:9px;padding:2px 6px;margin-left:4px">' + pct + '% ' + savingsLabel + '</span>' : '';
+        const fBadge = fixWins && pct < 0 ? ' <span class="advantage-badge advantage-badge-good" style="font-size:9px;padding:2px 6px;margin-left:4px">' + Math.abs(pct) + '% ' + savingsLabel + '</span>' : '';
+        return {
+          fHtml: '<div class="stat-row"><span class="stat-label">' + label + '</span><span class="stat-value" style="' + fStyle + '">' + fStr + fBadge + '</span></div>',
+          mHtml: '<div class="stat-row"><span class="stat-label">' + label + '</span><span class="stat-value" style="' + mStyle + '">' + mStr + mBadge + '</span></div>'
+        };
+      }
+
+      const rows = [
+        compRow('Total platforms', fixed.total, modular.total, '', 'fewer'),
+        compRow('Rack space', fixed.ru, modular.ru, 'RU', 'less'),
+        compRow('Total optics', fixed.optics, modular.optics, '', 'fewer'),
+        compRow('Est. power (80%)', fixed.power, modular.power, 'kW', 'lower'),
+      ];
+
+      const modWinCount = (modular.total < fixed.total ? 1 : 0) + (modular.ru < fixed.ru ? 1 : 0) + (modular.optics < fixed.optics ? 1 : 0) + (modular.power < fixed.power ? 1 : 0);
+      const modIsRecommended = modWinCount >= 3 || modular.tier < fixed.tier;
+
+      out += '<div class="result-section"><h3>' + iconServer() + 'Modular Spine Advantage</h3>';
+      out += '<div class="mrc-comparison">';
+
+      out += '<div class="mrc-compare-card' + (!modIsRecommended ? ' active' : '') + '">';
+      out += '<h4>' + (isCurrentModular ? altLabel : curLabel) + (!modIsRecommended ? ' ✓' : '') + '</h4>';
+      rows.forEach(r => { out += r.fHtml; });
+      if (fixed.tier === 3 && modular.tier <= 2) out += '<div class="exceeds-warning">Requires 3-tier (super-spine + spine + leaf)</div>';
+      out += '</div>';
+
+      out += '<div class="mrc-compare-card' + (modIsRecommended ? ' active' : '') + '">';
+      out += '<h4>' + (isCurrentModular ? curLabel : altLabel) + (modIsRecommended ? ' ✓' : '') + '</h4>';
+      rows.forEach(r => { out += r.mHtml; });
+      if (alt.maxScale > 0) out += '<div class="stat-row"><span class="stat-label">Max scale</span><span class="stat-value" style="color:var(--teal600);font-weight:700">' + fmtN(alt.maxScale) + ' GPUs</span></div>';
+      if (modIsRecommended) {
+        let recNote = 'A modular chassis spine is the recommended approach for this cluster size — delivering fewer platforms, less rack space, and a simpler fabric.';
+        if (alt.tier === 1) recNote = 'This cluster fits in a single ' + alt.spName + ' chassis — no leaf-spine cabling, fewer optics, simpler management. Consider a collapsed single-tier design.';
+        else if (fixed.tier === 3 && modular.tier <= 2) recNote = 'A modular chassis spine eliminates the need for a 3-tier design — reducing complexity, cabling, and total cost of ownership.';
+        out += '<div class="stat-note" style="background:var(--teal50);color:var(--teal800);padding:8px 12px;border-radius:var(--radius);margin-top:8px;font-weight:600">' + recNote + '</div>';
+      }
+      out += '</div>';
       out += '</div>';
 
       out += '</div>';
