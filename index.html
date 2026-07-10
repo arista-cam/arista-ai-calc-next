@@ -635,17 +635,24 @@
   .topo-title { font-weight: 600; font-size: 15px; flex: 1; }
   .topo-btn {
     background: var(--bg); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 4px 10px;
-    font-size: 13px; cursor: pointer; color: var(--text2);
+    border-radius: 8px; padding: 4px 12px;
+    font-size: 11px; font-weight: 600; font-family: inherit;
+    cursor: pointer; color: var(--text2);
     transition: all 0.15s ease;
   }
   .topo-btn:hover { border-color: var(--primary); color: var(--primary); }
-  .topo-select {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 4px 8px;
-    font-size: 13px; color: var(--text); cursor: pointer;
-    font-family: inherit;
+  .topo-export-menu {
+    display: none; position: absolute; top: 100%; right: 0; margin-top: 4px;
+    background: var(--panel-bg); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); z-index: 10; min-width: 120px; overflow: hidden;
   }
+  .topo-export-menu.open { display: block; }
+  .topo-export-menu button {
+    display: block; width: 100%; text-align: left; padding: 8px 12px;
+    background: none; border: none; font-size: 12px; color: var(--text);
+    cursor: pointer; font-family: inherit;
+  }
+  .topo-export-menu button:hover { background: var(--bg2); }
   #cy-container { flex: 1; min-height: 0; overflow: hidden; }
   .cy-tooltip {
     position: fixed; pointer-events: none;
@@ -654,6 +661,17 @@
     padding: 8px 10px; font-size: 12px; color: var(--text);
     max-width: 240px; z-index: 1001; line-height: 1.5;
   }
+  .changelog-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+  .changelog-overlay.open { display: flex; }
+  .changelog-panel { background: var(--panel-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: 520px; max-width: 92vw; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
+  .changelog-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .changelog-header h2 { font-size: 16px; font-weight: 700; margin: 0; }
+  .changelog-body { padding: 20px; overflow-y: auto; font-size: 13px; line-height: 1.6; }
+  .changelog-body h3 { font-size: 13px; font-weight: 700; color: var(--primary); margin: 16px 0 6px; }
+  .changelog-body h3:first-child { margin-top: 0; }
+  .changelog-body ul { margin: 0 0 8px; padding-left: 18px; }
+  .changelog-body li { margin-bottom: 3px; }
+
   .flow-select-ring {
     animation: flow-ring-pulse 1.5s ease-in-out infinite;
   }
@@ -682,9 +700,13 @@
 <div class="topbar">
   <div class="topbar-left">
     <div class="topbar-logo">AI</div>
-    <h1>AI Backend Network Calculator <span style="font-weight:400;font-size:14px;opacity:0.6">v1.2</span></h1>
+    <h1>AI Backend Network Calculator <span style="font-weight:400;font-size:14px;opacity:0.6">v1.3</span></h1>
   </div>
   <div class="topbar-right">
+    <a href="#" onclick="event.preventDefault();document.getElementById('changelog-modal').classList.add('open')" title="What's new" style="color:var(--text3);margin-right:12px;display:inline-flex;align-items:center;gap:5px;font-size:13px;text-decoration:none;opacity:0.7;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Changelog
+    </a>
     <a href="https://github.com/arista-cam/arista-ai-calculator/issues" target="_blank" rel="noopener" title="Report an issue" style="color:var(--text3);margin-right:12px;display:inline-flex;align-items:center;gap:5px;font-size:13px;text-decoration:none;opacity:0.7;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
       Feedback
@@ -732,6 +754,25 @@
         </div>
       </div>
 
+      <!-- GPU / NIC -->
+      <div class="input-section" id="section-gpu">
+        <div class="input-section-header" onclick="toggleSection('section-gpu')">
+          <div class="section-icon"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="8" y="8" width="8" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="2" x2="8" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="2" x2="12" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="2" x2="16" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="20" x2="8" y2="22" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="20" x2="12" y2="22" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="20" x2="16" y2="22" stroke="currentColor" stroke-width="1.5"/></svg></div>
+          <span class="section-title">GPU / NIC</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="input-section-body">
+          <div class="field">
+            <label>GPU / Accelerator</label>
+            <select id="gpu-model" onchange="onGpuChange()"></select>
+          </div>
+          <div class="field">
+            <label>NIC</label>
+            <select id="nic-model" onchange="onNicChange()"></select>
+          </div>
+        </div>
+      </div>
+
       <!-- Fabric Tier -->
       <div class="input-section" id="section-tier">
         <div class="input-section-header" onclick="toggleSection('section-tier')">
@@ -740,6 +781,14 @@
           <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="input-section-body">
+          <div class="field">
+            <label>Workload</label>
+            <span class="optic-toggle" style="margin-left:0">
+              <button type="button" class="optic-toggle-btn active" id="wl-training" onclick="setWorkload('training')">Training</button>
+              <button type="button" class="optic-toggle-btn" id="wl-inference" onclick="setWorkload('inference')">Inference</button>
+            </span>
+            <div class="hint" id="workload-hint">Non-blocking fabric, RoCEv2, CLB</div>
+          </div>
           <div class="tier-selector">
             <label class="tier-opt">
               <input type="radio" name="tier" value="1" onchange="updateTierHint()">
@@ -903,17 +952,20 @@
   <div class="topo-panel">
     <div class="topo-header">
       <span class="topo-title" id="topo-title">Network Topology</span>
-      <span id="topo-type-wrap" style="display:none">
-        <select id="topo-type" class="topo-select" onchange="onTopoTypeChange()">
-          <option value="fat-tree">Fat Tree</option>
-          <option value="rail">Rail-Optimized</option>
-          <option value="mrc-planes">Multi-Plane</option>
-        </select>
+      <span id="topo-style-wrap" style="display:none">
+        <span class="optic-toggle" style="margin-left:0">
+          <button type="button" class="optic-toggle-btn active" id="topo-style-fat" onclick="setTopoStyle('fat-tree')">Fat Tree</button>
+          <button type="button" class="optic-toggle-btn" id="topo-style-rail" onclick="setTopoStyle('rail')">Rail</button>
+        </span>
       </span>
-      <button class="topo-btn" onclick="renderTopology()" title="Redraw">Redraw</button>
       <button class="topo-btn" onclick="fitTopology()" title="Fit to view">Fit</button>
-      <button class="topo-btn" onclick="exportTopoPNG()" title="Export as PNG">PNG</button>
-      <button class="topo-btn" onclick="exportTopoSVG()" title="Export as SVG">SVG</button>
+      <span style="position:relative;display:inline-block">
+        <button class="topo-btn" onclick="this.nextElementSibling.classList.toggle('open')" title="Export">Export &#9662;</button>
+        <span class="topo-export-menu">
+          <button onclick="exportTopoPNG();this.parentElement.classList.remove('open')">Export PNG</button>
+          <button onclick="exportTopoSVG();this.parentElement.classList.remove('open')">Export SVG</button>
+        </span>
+      </span>
       <button class="topo-btn" onclick="closeTopoModal()" title="Close">&#x2715;</button>
     </div>
     <div style="padding:4px 16px;font-size:11px;opacity:0.5;color:var(--text2)">Click two compute nodes to trace traffic path · Double-click to expand GPU/NIC detail · Scroll to zoom · Drag to pan</div>
@@ -921,6 +973,58 @@
   </div>
 </div>
 <div class="cy-tooltip" id="cy-tooltip" style="display:none"></div>
+
+<!-- Changelog Modal -->
+<div class="changelog-overlay" id="changelog-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="changelog-panel">
+    <div class="changelog-header">
+      <h2>Changelog</h2>
+      <button style="background:none;border:none;cursor:pointer;color:var(--text3);padding:4px" onclick="document.getElementById('changelog-modal').classList.remove('open')"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="changelog-body">
+      <h3>v1.3 — July 2025</h3>
+      <ul>
+        <li><strong>GPU / NIC selection</strong> — choose from NVIDIA (GB300, GB200, B300, B200, H200, H100) and AMD (MI350X, MI325X, MI300X) with auto-configured NIC and link speed</li>
+        <li><strong>Training / Inference toggle</strong> — workload-aware guidance for fabric design (E-W vs N-S traffic patterns)</li>
+        <li><strong>FRO / LPO optics</strong> — renamed from Conventional, added annual OpEx savings estimate and CapEx guidance for 800G modules</li>
+        <li><strong>Flow visualization</strong> — click two compute nodes to trace traffic path with animated packets and device count classification (intra-rail, inter-rail, intra-pod, inter-pod)</li>
+        <li><strong>Topology export</strong> — PNG and SVG via Export dropdown in the topology viewer</li>
+        <li><strong>Topology redesign</strong> — Fat Tree / Rail pill toggle replaces dropdown; multi-plane always shows all planes with correct rail-optimized GPU-to-plane mapping (GPUs 0–3 → Plane 1, 4–7 → Plane 2)</li>
+        <li><strong>GPU/NIC expand</strong> — double-click a host to see per-GPU leaf connections inline (no overlay); lines draw to real leaf positions</li>
+        <li><strong>Spine-link breakout</strong> — host breakout auto-applies to spine links, fixing 8192-GPU 2×400G multi-plane topologies</li>
+        <li><strong>3-tier naming</strong> — renamed to Super-spine / Spine / Leaf with connectivity metrics (full/partial mesh)</li>
+        <li><strong>400G LPO removed</strong> — LPO only shown for 800G optics (the only speed where it exists)</li>
+        <li><strong>Multi-plane naming</strong> — renamed from "MRC Multi-Plane" to "Multi-Plane"</li>
+        <li><strong>NIC breakout toggle</strong> — Distribute / NIC Breakout pill for multi-plane with fewer NICs than planes</li>
+        <li><strong>Leaf platform fix</strong> — 7800R4 chassis no longer suggested as leaf switches</li>
+        <li><strong>Changelog</strong> — version history accessible from the top bar</li>
+      </ul>
+      <h3>v1.2 — June 2025</h3>
+      <ul>
+        <li>Custom CSS tooltips with info icons</li>
+        <li>3-tier pod-based Clos with proportional spine-agg connectivity</li>
+        <li>Rail-optimized topology view with per-GPU leaf mapping</li>
+        <li>MRC multi-plane topology view with plane-colored backgrounds</li>
+        <li>Click-to-expand GPU/NIC detail in topology</li>
+      </ul>
+      <h3>v1.1 — May 2025</h3>
+      <ul>
+        <li>DES (Distributed Etherlink Switch) tier 4</li>
+        <li>Platform auto-suggestion with Apply/Dismiss</li>
+        <li>Power consumption estimates (Typical / 80% / Max)</li>
+        <li>Inline SVG topology diagrams</li>
+        <li>D3 interactive topology modal</li>
+      </ul>
+      <h3>v1.0 — April 2025</h3>
+      <ul>
+        <li>Initial release — two-tier leaf-spine calculator</li>
+        <li>Arista 7060X6 and 7800R4 platforms</li>
+        <li>Optics breakdown with transceiver counts</li>
+        <li>Light/dark theme with system preference</li>
+      </ul>
+    </div>
+  </div>
+</div>
 
 <div id="suggestion-leaf" class="platform-suggestion" style="display:none">
   <span id="suggestion-leaf-text"></span>
@@ -996,6 +1100,32 @@ const PLATFORMS = [
   { name: '7800R4 16-slot',radix: 576, type: 'chassis', desc: '7800R4 16-slot (576-port)', slots: 16, portsPerSlot: 36, powerTyp: 18000, powerMax: 28074 },
 ];
 
+const GPU_MODELS = [
+  { id: 'custom',    name: 'Custom',              gpusPerNode: 8,  defaultNic: null,         defaultSpeed: 400, vendor: null },
+  { id: 'gb300',     name: 'NVIDIA GB300 NVL72',  gpusPerNode: 72, defaultNic: 'cx8',        defaultSpeed: 800, vendor: 'nvidia' },
+  { id: 'gb200',     name: 'NVIDIA GB200 NVL72',  gpusPerNode: 72, defaultNic: 'cx7',        defaultSpeed: 400, vendor: 'nvidia' },
+  { id: 'gb200-36',  name: 'NVIDIA GB200 NVL36',  gpusPerNode: 36, defaultNic: 'cx7',        defaultSpeed: 400, vendor: 'nvidia' },
+  { id: 'b300',      name: 'NVIDIA B300',         gpusPerNode: 8,  defaultNic: 'cx8',        defaultSpeed: 800, vendor: 'nvidia' },
+  { id: 'b200',      name: 'NVIDIA B200',         gpusPerNode: 8,  defaultNic: 'cx7',        defaultSpeed: 400, vendor: 'nvidia' },
+  { id: 'h200',      name: 'NVIDIA H200',         gpusPerNode: 8,  defaultNic: 'cx7',        defaultSpeed: 400, vendor: 'nvidia' },
+  { id: 'h100',      name: 'NVIDIA H100',         gpusPerNode: 8,  defaultNic: 'cx7',        defaultSpeed: 400, vendor: 'nvidia' },
+  { id: 'mi350x',    name: 'AMD MI350X',          gpusPerNode: 8,  defaultNic: 'pollara800', defaultSpeed: 800, vendor: 'amd' },
+  { id: 'mi325x',    name: 'AMD MI325X',          gpusPerNode: 8,  defaultNic: 'pollara400', defaultSpeed: 400, vendor: 'amd' },
+  { id: 'mi300x',    name: 'AMD MI300X',          gpusPerNode: 8,  defaultNic: 'pollara400', defaultSpeed: 400, vendor: 'amd' },
+];
+
+const NIC_MODELS = [
+  { id: 'custom',      name: 'Custom',                     speed: null, vendor: null },
+  { id: 'cx8',         name: 'NVIDIA ConnectX-8 SuperNIC',  speed: 800,  vendor: 'nvidia' },
+  { id: 'cx7',         name: 'NVIDIA ConnectX-7',           speed: 400,  vendor: 'nvidia' },
+  { id: 'bf3',         name: 'NVIDIA BlueField-3',          speed: 400,  vendor: 'nvidia' },
+  { id: 'pollara800',  name: 'AMD Pollara 800',             speed: 800,  vendor: 'amd' },
+  { id: 'pollara400',  name: 'AMD Pollara 400',             speed: 400,  vendor: 'amd' },
+  { id: 'thor2',       name: 'Broadcom Thor2',              speed: 400,  vendor: 'broadcom' },
+];
+
+const LEAF_PLATFORMS = PLATFORMS.filter(p => p.type !== 'chassis');
+
 let pendingSuggestion = null;
 let suggestionDismissed = false;
 
@@ -1009,13 +1139,77 @@ function populateDropdowns() {
   leafSelect.innerHTML = '';
   spineSelect.innerHTML = '';
   for (const p of PLATFORMS) {
-    leafSelect.appendChild(new Option(p.desc, p.radix));
+    if (p.type !== 'chassis') leafSelect.appendChild(new Option(p.desc, p.radix));
     spineSelect.appendChild(new Option(p.desc, p.radix));
   }
   leafSelect.appendChild(new Option('Other (custom)', 'other'));
   spineSelect.appendChild(new Option('Other (custom)', 'other'));
   leafSelect.value  = '64';
   spineSelect.value = '64';
+
+  const gpuSelect = document.getElementById('gpu-model');
+  gpuSelect.innerHTML = '';
+  for (const g of GPU_MODELS) gpuSelect.appendChild(new Option(g.name, g.id));
+  gpuSelect.value = 'custom';
+
+  populateNicDropdown();
+}
+
+function populateNicDropdown(vendorFilter) {
+  const nicSelect = document.getElementById('nic-model');
+  const prev = nicSelect.value;
+  nicSelect.innerHTML = '';
+  const compatible = vendorFilter === 'amd' ? ['amd', 'broadcom'] : vendorFilter ? [vendorFilter] : null;
+  for (const n of NIC_MODELS) {
+    if (!compatible || !n.vendor || compatible.includes(n.vendor)) {
+      nicSelect.appendChild(new Option(n.name, n.id));
+    }
+  }
+  if ([...nicSelect.options].some(o => o.value === prev)) nicSelect.value = prev;
+}
+
+function onGpuChange() {
+  const gpu = GPU_MODELS.find(g => g.id === document.getElementById('gpu-model').value);
+  if (!gpu || gpu.id === 'custom') {
+    document.getElementById('gpus-per-node').disabled = false;
+    document.getElementById('links-per-gpu').disabled = false;
+    populateNicDropdown();
+    document.getElementById('nic-model').value = 'custom';
+    return;
+  }
+  document.getElementById('gpus-per-node').value = gpu.gpusPerNode;
+  document.getElementById('gpus-per-node').disabled = true;
+  document.getElementById('links-per-gpu').value = 1;
+  document.getElementById('links-per-gpu').disabled = true;
+  document.getElementById('host-speed').value = String(gpu.defaultSpeed);
+
+  populateNicDropdown(gpu.vendor);
+  if (gpu.defaultNic) document.getElementById('nic-model').value = gpu.defaultNic;
+
+  syncFromNodes();
+  syncBreakout();
+  autoSelectPlatforms();
+}
+
+function onNicChange() {
+  const nic = NIC_MODELS.find(n => n.id === document.getElementById('nic-model').value);
+  if (!nic || !nic.speed) return;
+  document.getElementById('host-speed').value = String(nic.speed);
+  syncBreakout();
+  autoSelectPlatforms();
+}
+
+function setWorkload(mode) {
+  document.getElementById('wl-training').className = 'optic-toggle-btn' + (mode === 'training' ? ' active' : '');
+  document.getElementById('wl-inference').className = 'optic-toggle-btn' + (mode === 'inference' ? ' active' : '');
+  document.getElementById('workload-hint').textContent = mode === 'training'
+    ? 'E-W traffic, RoCEv2, lossless, CLB recommended'
+    : 'N-S traffic, TCP/HTTP, oversubscription may be acceptable';
+  clearResults();
+}
+
+function getWorkload() {
+  return document.getElementById('wl-training').classList.contains('active') ? 'training' : 'inference';
 }
 
 function clearResults() {
@@ -1037,7 +1231,11 @@ function resetInputs() {
   document.getElementById('breakout').value = 2;
   document.getElementById('spine-speed').value = 800;
   document.getElementById('host-speed').value = 400;
+  document.getElementById('gpu-model').value = 'custom';
+  document.getElementById('gpus-per-node').disabled = false;
+  document.getElementById('links-per-gpu').disabled = false;
   setNicBreakout(false);
+  setWorkload('training');
   document.getElementById('nic-breakout-row').style.display = 'none';
   document.getElementById('leaf-radix-custom').style.display = 'none';
   document.getElementById('spine-radix-custom').style.display = 'none';
@@ -1066,7 +1264,7 @@ function minPlatformForPorts(portsNeeded) {
 function minBalanced2Tier(linksPerPlane, breakout, oversub) {
   const spSpeed = parseInt(document.getElementById('spine-speed').value) || 800;
   const ulBreak = spSpeed < 800 ? Math.round(800 / spSpeed) : 1;
-  for (const lp of PLATFORMS) {
+  for (const lp of LEAF_PLATFORMS) {
     const physDown = Math.floor(lp.radix * oversub / (1 + oversub));
     const effDown  = physDown * breakout;
     const up       = lp.radix - physDown;
@@ -1085,7 +1283,7 @@ function minBalanced2Tier(linksPerPlane, breakout, oversub) {
 function minBalanced3Tier(linksPerPlane, breakout, oversub) {
   const spSpeed = parseInt(document.getElementById('spine-speed').value) || 800;
   const ulBreak = spSpeed < 800 ? Math.round(800 / spSpeed) : 1;
-  for (const lp of PLATFORMS) {
+  for (const lp of LEAF_PLATFORMS) {
     const physDown = Math.floor(lp.radix * oversub / (1 + oversub));
     const effDown  = physDown * breakout;
     const up       = lp.radix - physDown;
@@ -1257,7 +1455,7 @@ function autoSelect2Tier(linksPerPlane, breakout) {
   const ulBreak = spSpeed < 800 ? Math.round(800 / spSpeed) : 1;
   let best = null;
   for (let pass = 0; pass < 2; pass++) {
-    for (const lp of PLATFORMS) {
+    for (const lp of LEAF_PLATFORMS) {
       const physDown = Math.floor(lp.radix / 2);
       const effDown  = physDown * breakout;
       const uplinks  = lp.radix - physDown;
@@ -1286,7 +1484,7 @@ function autoSelect2Tier(linksPerPlane, breakout) {
   if (best) {
     showPlatformSuggestion(best.leaf, best.spine);
   } else {
-    showPlatformSuggestion(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
+    showPlatformSuggestion(LEAF_PLATFORMS[LEAF_PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
   }
 }
 
@@ -1295,7 +1493,7 @@ function autoSelect3Tier(linksPerPlane, breakout) {
   const ulBreak = spSpeed < 800 ? Math.round(800 / spSpeed) : 1;
   let best = null;
   for (let pass = 0; pass < 2; pass++) {
-    for (const lp of PLATFORMS) {
+    for (const lp of LEAF_PLATFORMS) {
       const physDown = Math.floor(lp.radix / 2);
       const effDown  = physDown * breakout;
       const uplinks  = lp.radix - physDown;
@@ -1328,7 +1526,7 @@ function autoSelect3Tier(linksPerPlane, breakout) {
   if (best) {
     showPlatformSuggestion(best.leaf, best.spine);
   } else {
-    showPlatformSuggestion(PLATFORMS[PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
+    showPlatformSuggestion(LEAF_PLATFORMS[LEAF_PLATFORMS.length - 1].radix, PLATFORMS[PLATFORMS.length - 1].radix);
   }
 }
 
@@ -1501,7 +1699,7 @@ function opticsSection(rows, noteText, showLpo) {
   let s = '<div class="result-section"><h3>' + iconPlug() + 'Optics breakdown';
   if (showLpo !== false) {
     s += '<span class="optic-toggle">';
-    s += '<button class="optic-toggle-btn active" data-mode="conventional" onclick="toggleOpticMode(\'conventional\')">Conventional</button>';
+    s += '<button class="optic-toggle-btn active" data-mode="conventional" onclick="toggleOpticMode(\'conventional\')">FRO</button>';
     s += '<button class="optic-toggle-btn" data-mode="lpo" onclick="toggleOpticMode(\'lpo\')">LPO</button>';
     s += '</span>';
   }
@@ -2091,8 +2289,20 @@ function calculate() {
   const totalSwitches = totalSpine + totalLeaf;
   let out = warnHtml;
   out += '<div class="tier-badge ' + tierColors[tierNum] + '">' + tierLabels[tierNum] + '</div>';
+
+  const selGpu = GPU_MODELS.find(g => g.id === document.getElementById('gpu-model').value);
+  const selNic = NIC_MODELS.find(n => n.id === document.getElementById('nic-model').value);
+  const wl = getWorkload();
+  if ((selGpu && selGpu.id !== 'custom') || (selNic && selNic.id !== 'custom') || wl === 'inference') {
+    out += '<div class="note-box" style="margin-bottom:12px;display:flex;gap:16px;flex-wrap:wrap;font-size:12px">';
+    if (selGpu && selGpu.id !== 'custom') out += '<span><strong>GPU:</strong> ' + esc(selGpu.name) + '</span>';
+    if (selNic && selNic.id !== 'custom') out += '<span><strong>NIC:</strong> ' + esc(selNic.name) + ' (' + (selNic.speed || '?') + 'G)</span>';
+    out += '<span><strong>Workload:</strong> ' + (wl === 'training' ? 'Training — E-W GPU-to-GPU, RoCEv2 lossless, CLB recommended' : 'Inference — N-S client-to-GPU, TCP/HTTP, standard ECMP') + '</span>';
+    out += '</div>';
+  }
+
   out += '<div class="metrics-grid">';
-  out += metric(fmtN(gpus),          'Total GPUs',     '');
+  out += metric(fmtN(gpus),          'Total GPUs',     (selGpu && selGpu.id !== 'custom') ? selGpu.name : '');
   out += metric(fmtN(totalHostLinks),'Backend Links',   linksPerGpu + ' per GPU', 'Total backend network links. Each GPU connects to the fabric with ' + linksPerGpu + ' link(s)');
   if (planes > 1) {
     const bwPerPlane = nicBreakout ? (hostSpeed * linksPerGpu / planes) : hostSpeedPerPlane;
@@ -2266,15 +2476,24 @@ function calculate() {
   powerHtml += '<tr class="subtotal"><td>Total fabric power</td><td>' + totalSix(optConvTotal, switchTypW, switch80W, switchMaxW) + '</td></tr>';
 
   if (lpoSavingsW > 0) {
+    const annualHours = 8760;
+    const elecRate = 0.10;
+    const annualSavings = (lpoSavingsW / 1000) * annualHours * elecRate;
+    const optic800Count = opticCounts.spine + opticCounts.fabric;
+
     powerHtml += '<tr><td colspan="2">'
       + '<span class="optic-lpo power-typ">LPO savings: ' + kw(lpoSavingsW) + ' (' + lpoPct(totalConvTyp) + '% reduction in total power)</span>'
       + '<span class="optic-lpo power-80">LPO savings: ' + kw(lpoSavingsW) + ' (' + lpoPct(totalConv80) + '% reduction in total power)</span>'
       + '<span class="optic-lpo power-max">LPO savings: ' + kw(lpoSavingsW) + ' (' + lpoPct(totalConvMax) + '% reduction in total power)</span>'
       + '</td></tr>';
+    powerHtml += '<tr><td colspan="2"><span class="optic-lpo">'
+      + '<strong>Est. OpEx savings:</strong> $' + fmtN(Math.round(annualSavings)) + '/year (at $' + elecRate.toFixed(2) + '/kWh)'
+      + (optic800Count > 0 ? ' · <strong>Est. CapEx:</strong> LPO ~30–40% less per 800G module (' + fmtN(optic800Count) + ' modules in this design)' : '')
+      + '</span></td></tr>';
   }
 
   powerHtml += '</table>';
-  powerHtml += '<div class="note-box">Power figures are estimates based on Arista platform datasheets. Switch power: typical at 25°C/50% load, max at 40°C/100% load (excluding optics). Actual consumption varies with configuration and environment.</div>';
+  powerHtml += '<div class="note-box">Power figures are estimates based on Arista platform datasheets. Switch power: typical at 25°C/50% load, max at 40°C/100% load (excluding optics). OpEx/CapEx savings are illustrative estimates — actual costs vary by vendor and region.</div>';
   powerHtml += '</div>';
 
   out += switchHtml + optHtml + powerHtml;
@@ -2312,35 +2531,31 @@ const RAIL_COLORS = [
 
 function topoTitle() {
   const c = lastTopoConfig;
-  if (currentTopoType === 'mrc-planes' && c.planes > 1) return 'Multi-Plane Topology (' + c.planes + ' Planes)';
-  return 'Network Topology' + (c.planes > 1 ? ' (Plane 1 of ' + c.planes + ')' : '');
+  const style = currentTopoType === 'rail' ? 'Rail-Optimized' : 'Fat Tree';
+  if (c.planes > 1) return 'Multi-Plane Topology (' + c.planes + ' Planes, ' + style + ')';
+  return style + ' Topology';
+}
+
+function setTopoStyle(style) {
+  currentTopoType = style;
+  document.getElementById('topo-style-fat').className = 'optic-toggle-btn' + (style === 'fat-tree' ? ' active' : '');
+  document.getElementById('topo-style-rail').className = 'optic-toggle-btn' + (style === 'rail' ? ' active' : '');
+  document.getElementById('topo-title').textContent = topoTitle();
+  renderTopology();
 }
 
 function openTopoModal() {
   if (!lastTopoConfig) return;
   const overlay = document.getElementById('topo-overlay');
   const c = lastTopoConfig;
-  const mrcOpt = document.querySelector('#topo-type option[value="mrc-planes"]');
-  if (mrcOpt) mrcOpt.style.display = c.planes > 1 ? '' : 'none';
-  if (c.planes > 1) {
-    currentTopoType = 'mrc-planes';
-    document.getElementById('topo-type-wrap').style.display = 'none';
-  } else {
-    if (currentTopoType === 'mrc-planes') currentTopoType = 'fat-tree';
-    document.getElementById('topo-type-wrap').style.display = c.tier >= 2 ? '' : 'none';
-  }
-  document.getElementById('topo-type').value = currentTopoType;
+  document.getElementById('topo-style-wrap').style.display = c.tier >= 2 ? '' : 'none';
+  document.getElementById('topo-style-fat').className = 'optic-toggle-btn' + (currentTopoType === 'fat-tree' ? ' active' : '');
+  document.getElementById('topo-style-rail').className = 'optic-toggle-btn' + (currentTopoType === 'rail' ? ' active' : '');
   document.getElementById('topo-title').textContent = topoTitle();
   overlay.classList.add('active');
   document.body.style.overflow = 'hidden';
   setTimeout(() => renderTopology(), 100);
   document.addEventListener('keydown', topoEscHandler);
-}
-
-function onTopoTypeChange() {
-  currentTopoType = document.getElementById('topo-type').value;
-  document.getElementById('topo-title').textContent = topoTitle();
-  renderTopology();
 }
 
 function closeTopoModal() {
@@ -2357,19 +2572,26 @@ function topoEscHandler(e) { if (e.key === 'Escape') closeTopoModal(); }
 function buildMRCTopoData() {
   const c = lastTopoConfig;
   const nodes = [], edges = [];
-  const MAX_SHOW = 6;
+  const isRail = currentTopoType === 'rail';
+  const gpusPerPlane = Math.ceil((c.hosts.gpusPerNode || 8) / c.planes);
+  const MAX_SHOW = isRail ? Math.max(6, gpusPerPlane) : 6;
   const planeCount = c.planes;
-  const GAP_X = 120, GAP_Y = 160, PLANE_GAP = 140;
+  const GAP_X = isRail && gpusPerPlane > 6 ? 100 : 120;
+  const GAP_Y = 160;
+  const PLANE_GAP = 140;
 
   const linksPerNodePerPlane = c.hosts.linksPerNodePerPlane || Math.ceil(c.hosts.linksPerNode / planeCount);
   const hostCountPerLeaf = Math.ceil(c.hosts.perLeaf / linksPerNodePerPlane);
   const bottomTier = c.tiers[c.tiers.length - 1];
 
-  function displayedCount(count) { return count <= MAX_SHOW ? count : 5; }
+  function displayedCount(count, tierId) {
+    if (isRail && tierId === bottomTier.id) return Math.min(count, Math.max(MAX_SHOW, gpusPerPlane));
+    return count <= MAX_SHOW ? count : 5;
+  }
 
   let maxInPlane = 0;
   for (const tier of c.tiers) {
-    const d = displayedCount(tier.perPlane);
+    const d = displayedCount(tier.perPlane, tier.id);
     if (d > maxInPlane) maxInPlane = d;
   }
   const planeWidth = (maxInPlane - 1) * GAP_X;
@@ -2388,13 +2610,13 @@ function buildMRCTopoData() {
     for (let ti = 0; ti < c.tiers.length; ti++) {
       const tier = c.tiers[ti];
       const count = tier.perPlane;
-      const dCount = displayedCount(count);
+      const dCount = displayedCount(count, tier.id);
       const rowW = (dCount - 1) * GAP_X;
       const sx = ox + (planeWidth - rowW) / 2;
       const key = p + '-' + tier.id;
       realIndices[key] = [];
 
-      if (count <= MAX_SHOW) {
+      if (dCount >= count) {
         for (let i = 0; i < count; i++) {
           realIndices[key].push(i);
           nodes.push({
@@ -2406,7 +2628,8 @@ function buildMRCTopoData() {
           });
         }
       } else {
-        for (let i = 0; i < 3; i++) {
+        const showFirst = dCount - 2;
+        for (let i = 0; i < showFirst; i++) {
           realIndices[key].push(i);
           nodes.push({
             id: 'p' + p + '-' + tier.id + '-' + i,
@@ -2418,9 +2641,9 @@ function buildMRCTopoData() {
         }
         nodes.push({
           id: 'p' + p + '-' + tier.id + '-ellipsis',
-          label: '…+' + (count - 4),
+          label: '…+' + (count - showFirst - 1),
           tier: 'ellipsis', rank: ti, plane: p,
-          pos: { x: sx + 3 * GAP_X, y: ti * GAP_Y }
+          pos: { x: sx + showFirst * GAP_X, y: ti * GAP_Y }
         });
         realIndices[key].push(count - 1);
         nodes.push({
@@ -2428,7 +2651,7 @@ function buildMRCTopoData() {
           label: tier.label + ' ' + count,
           tier: tier.id, platform: tier.label, radix: tier.radix,
           rank: ti, plane: p,
-          pos: { x: sx + 4 * GAP_X, y: ti * GAP_Y }
+          pos: { x: sx + (showFirst + 1) * GAP_X, y: ti * GAP_Y }
         });
       }
     }
@@ -2511,7 +2734,7 @@ function buildMRCTopoData() {
   // Host row spans all planes
   const hostRank = c.tiers.length;
   const totalHosts = bottomTier.perPlane * hostCountPerLeaf;
-  const dHosts = displayedCount(totalHosts);
+  const dHosts = displayedCount(totalHosts, 'host');
   const hostRowW = (dHosts - 1) * GAP_X;
   const hostSx = (totalPlanesWidth - hostRowW) / 2;
 
@@ -2581,22 +2804,46 @@ function buildMRCTopoData() {
     if (n.tier === 'host') n.realConns = c.hosts.linksPerNode;
   });
 
-  // Cross-plane host edges: each host connects to one leaf in each plane
+  // Cross-plane host edges: each host connects to leaf(s) in each plane
   const hostLink = c.links.find(l => l.to === 'host');
   const hostNodes = nodes.filter(n => n.tier === 'host');
+  const isMrcRail = currentTopoType === 'rail';
+
   for (let hi = 0; hi < hostNodes.length; hi++) {
     const hn = hostNodes[hi];
     for (let p = 0; p < planeCount; p++) {
       const leafKey = p + '-' + bottomTier.id;
       const leafIdxs = realIndices[leafKey] || [];
-      const leafIdx = leafIdxs[hi % leafIdxs.length];
-      edges.push({
-        source: 'p' + p + '-' + bottomTier.id + '-' + leafIdx,
-        target: hn.id,
-        label: hostLink ? linksPerNodePerPlane + '×' + hostLink.speed + 'G' : '',
-        weight: 1.5, bundle: linksPerNodePerPlane,
-        speed: hostLink ? hostLink.speed : 400, plane: p
-      });
+
+      if (isMrcRail) {
+        const gpus = c.hosts.gpusPerNode || 8;
+        const gpusThisPlane = Math.ceil(gpus / planeCount);
+        const totalLeaves = bottomTier.perPlane;
+        const totalNodesEst = Math.round(totalLeaves * c.hosts.perLeaf / c.hosts.linksPerNode);
+        const nodesPerLeaf = Math.max(1, Math.ceil(totalNodesEst / totalLeaves));
+        const hostIdx = parseInt(hn.label.replace(/\D+/g, '')) - 1 || 0;
+        const startLeaf = (hostIdx * gpusThisPlane) % totalLeaves;
+        for (let gi = 0; gi < gpusThisPlane; gi++) {
+          const leafNum = (startLeaf + gi) % totalLeaves;
+          if (leafIdxs.includes(leafNum)) {
+            edges.push({
+              source: 'p' + p + '-' + bottomTier.id + '-' + leafNum, target: hn.id,
+              label: '1×' + (hostLink ? hostLink.speed : 400) + 'G',
+              weight: 1, bundle: 1, speed: hostLink ? hostLink.speed : 400, plane: p,
+              gpuIdx: p * gpusThisPlane + gi
+            });
+          }
+        }
+      } else {
+        const leafIdx = leafIdxs[hi % leafIdxs.length];
+        edges.push({
+          source: 'p' + p + '-' + bottomTier.id + '-' + leafIdx,
+          target: hn.id,
+          label: hostLink ? linksPerNodePerPlane + '×' + hostLink.speed + 'G' : '',
+          weight: 1.5, bundle: linksPerNodePerPlane,
+          speed: hostLink ? hostLink.speed : 400, plane: p
+        });
+      }
     }
   }
 
@@ -2604,7 +2851,7 @@ function buildMRCTopoData() {
 }
 
 function buildTopoData() {
-  if (currentTopoType === 'mrc-planes' && lastTopoConfig.planes > 1) return buildMRCTopoData();
+  if (lastTopoConfig.planes > 1) return buildMRCTopoData();
 
   const c = lastTopoConfig;
   const nodes = [], edges = [];
@@ -3210,12 +3457,12 @@ function renderTopology() {
 
   function classifyPath(path) {
     const tiers = path.map(id => tierById[id]);
-    const hops = path.length - 1;
+    const devices = path.filter(id => tierById[id] !== 'host').length;
     const hasSpine = tiers.includes('spine');
     const hasAgg = tiers.includes('aggLeaf');
 
     let type, label, color;
-    if (hops <= 2 && !hasSpine) {
+    if (devices <= 1 && !hasSpine) {
       type = 'intra-rail'; label = 'Intra-Rail'; color = '#2ecc71';
     } else if (hasSpine && !hasAgg) {
       type = 'inter-rail'; label = 'Inter-Rail'; color = '#e67e22';
@@ -3227,7 +3474,7 @@ function renderTopology() {
       type = 'multi-hop'; label = 'Multi-Hop'; color = '#e67e22';
     }
 
-    const info = { type, label, hops, color };
+    const info = { type, label, hops: devices, color };
     if (isMRC) {
       const pathPlanes = path.map(id => planeById[id]).filter(p => p >= 0);
       const unique = [...new Set(pathPlanes)];
@@ -3293,27 +3540,31 @@ function renderTopology() {
         .attr('stroke-linecap', 'round').attr('stroke-opacity', 0.85)
         .transition().duration(300).delay(i * 150)
         .attr('x2', tgt.x).attr('y2', tgt.y);
-
-      const mx = (src.x + tgt.x) / 2;
-      const my = (src.y + tgt.y) / 2;
-      flowOverlayGroup.append('circle')
-        .attr('cx', mx).attr('cy', my).attr('r', 10)
-        .attr('fill', color).style('opacity', 0)
-        .transition().duration(200).delay(i * 150 + 200).style('opacity', 0.9);
-      flowOverlayGroup.append('text')
-        .attr('x', mx).attr('y', my).attr('dy', '0.35em')
-        .attr('text-anchor', 'middle')
-        .attr('fill', '#fff').attr('font-size', 9).attr('font-weight', 700)
-        .text(i + 1).style('opacity', 0)
-        .transition().duration(200).delay(i * 150 + 200).style('opacity', 1);
     }
 
-    path.forEach(nodeId => {
+    let devNum = 0;
+    path.forEach((nodeId, i) => {
+      const isDevice = tierById[nodeId] !== 'host';
       nodeGs.each(function(d) {
         if (d.id === nodeId) {
           d3.select(this).select('rect')
             .transition().duration(200)
             .attr('stroke', color).attr('stroke-width', 3);
+          if (isDevice) {
+            devNum++;
+            const pos = posLookup[nodeId];
+            const dn = devNum;
+            flowInfoGroup.append('circle')
+              .attr('cx', pos.x + 20).attr('cy', pos.y - 20).attr('r', 10)
+              .attr('fill', color).style('opacity', 0)
+              .transition().duration(200).delay(i * 150).style('opacity', 0.9);
+            flowInfoGroup.append('text')
+              .attr('x', pos.x + 20).attr('y', pos.y - 20).attr('dy', '0.35em')
+              .attr('text-anchor', 'middle')
+              .attr('fill', '#fff').attr('font-size', 9).attr('font-weight', 700)
+              .text(dn).style('opacity', 0)
+              .transition().duration(200).delay(i * 150).style('opacity', 1);
+          }
         }
       });
     });
@@ -3338,7 +3589,7 @@ function renderTopology() {
       return n ? n.label.split('\n')[0] : id;
     });
     const lines = [
-      info.label + ' — ' + info.hops + ' hop' + (info.hops !== 1 ? 's' : ''),
+      info.label + ' — ' + info.hops + ' device' + (info.hops !== 1 ? 's' : ''),
       nodeLabels.join('  →  ')
     ];
     if (info.planeLabel) lines.push('via ' + info.planeLabel);
@@ -3443,7 +3694,7 @@ function renderTopology() {
 
     const nicSpacing = Math.min(36, 280 / Math.max(gpus - 1, 1));
     const nicRowWidth = (gpus - 1) * nicSpacing;
-    const nicY = hostPos.y + 70;
+    const nicY = hostPos.y + 50;
     const nicStartX = hostPos.x - nicRowWidth / 2;
 
     const hostEdges = data.edges.filter(e => e.target === d.id || e.source === d.id);
@@ -3458,8 +3709,7 @@ function renderTopology() {
       : null;
 
     highlightNode(d.id);
-    nodeGs.filter(nd => nd.id === d.id).transition().duration(200).style('opacity', 0.25);
-
+    nodeGs.filter(nd => nd.id === d.id).transition().duration(200).style('opacity', 0.3);
     edgeLines.filter(e => e.target === d.id || e.source === d.id)
       .transition().duration(200).style('opacity', 0);
 
@@ -3467,65 +3717,13 @@ function renderTopology() {
     nicOverlayGroup = g.append('g').attr('class', 'nic-overlay');
     nicOverlayGroup._edgeLayer = nicEdgeLayer;
 
-    // Rail mode: create gpusPerNode temp leaf nodes, hide existing leaves
-    let railLeafPositions = null;
-    if (isRailView) {
-      const bottomTier = c.tiers[c.tiers.length - 1];
-      const leafNodes = data.nodes.filter(n => n.tier === bottomTier.id || (n.tier === 'ellipsis' && n.id.startsWith(bottomTier.id)));
-      const leafY = leafNodes.length > 0 ? leafNodes[0].pos.y : hostPos.y - 160;
-
-      // Hide existing leaf nodes and their edges
-      nodeGs.filter(nd => leafNodes.some(ln => ln.id === nd.id))
-        .transition().duration(200).style('opacity', 0);
-      edgeLines.filter(e => leafNodes.some(ln => ln.id === e.source || ln.id === e.target))
-        .transition().duration(200).style('opacity', 0);
-
-      railLeafPositions = [];
-      const leafSpacing = 140;
-      const totalRailWidth = (gpus - 1) * leafSpacing;
-      const railStartX = hostPos.x - totalRailWidth / 2;
-      const totalLeaves = bottomTier.perPlane;
-      const totalNodes = Math.round(totalLeaves * h.perLeaf / h.linksPerNode);
-      const leavesPerRail = Math.max(1, totalLeaves / gpus);
-      const nodesPerGroup = Math.ceil(totalNodes / leavesPerRail);
-      const hostIdx = parseInt(d.label.replace(/\D+/g, '')) - 1 || 0;
-      const leafGroup = Math.floor(hostIdx / nodesPerGroup);
-      const startLeaf = leafGroup * gpus;
-
-      for (let gi = 0; gi < gpus; gi++) {
-        const realLeafIdx = startLeaf + gi;
-        const lx = railStartX + gi * leafSpacing;
-        const ly = leafY;
-        railLeafPositions.push({ idx: realLeafIdx, pos: { x: lx, y: ly } });
-        const color = RAIL_COLORS[gi % RAIL_COLORS.length];
-        const label = bottomTier.label + ' ' + (realLeafIdx + 1);
-        const tempG = nicOverlayGroup.append('g')
-          .attr('class', 'nic-temp-leaf')
-          .attr('transform', 'translate(' + lx + ',' + ly + ')')
-          .style('opacity', 0);
-        const tempText = tempG.append('text')
-          .attr('text-anchor', 'middle').attr('dy', '0.35em')
-          .attr('fill', isDark ? tintColor(color, 0.35) : shadeColor(color, 0.25))
-          .attr('font-size', 12).attr('font-weight', 700)
-          .text(label);
-        const bx = tempText.node().getBBox();
-        const pw = bx.width + 28, ph = 34;
-        tempG.insert('rect', 'text')
-          .attr('x', -pw / 2).attr('y', -ph / 2)
-          .attr('width', pw).attr('height', ph).attr('rx', 8)
-          .attr('fill', isDark ? shadeColor(color, 0.65) : tintColor(color, 0.82))
-          .attr('stroke', isDark ? tintColor(color, 0.15) : shadeColor(color, 0.1))
-          .attr('stroke-width', 2)
-          .attr('filter', 'url(#node-shadow)');
-        tempG.transition().duration(350).ease(d3.easeCubicOut).style('opacity', 1);
-      }
-    }
-
+    // Build NIC data — determine which plane/leaf each GPU connects to
+    const gpusPerPlane = Math.ceil(gpus / pl);
     const nics = [];
     for (let gi = 0; gi < gpus; gi++) {
       const nicPlanes = [];
-      if (isRailView) {
-        nicPlanes.push(gi);
+      if (isRailView && pl > 1) {
+        nicPlanes.push(Math.floor(gi / gpusPerPlane));
       } else if (pl <= 1) {
         nicPlanes.push(0);
       } else if (isBreakout || lpg >= pl) {
@@ -3533,116 +3731,83 @@ function renderTopology() {
       } else {
         for (let l = 0; l < lpg; l++) nicPlanes.push((gi * lpg + l) % pl);
       }
-      nics.push({ idx: gi, pos: { x: nicStartX + gi * nicSpacing, y: nicY }, planes: nicPlanes, railIdx: isRailView ? gi : -1 });
+      nics.push({ idx: gi, pos: { x: nicStartX + gi * nicSpacing, y: nicY }, planes: nicPlanes });
     }
 
+    // Draw lines from each NIC to its connected leaf(s)
     nics.forEach(nic => {
       if (isRailView) {
-        const rlp = railLeafPositions[nic.idx];
-        if (!rlp) return;
-        const leafPos = rlp.pos;
-        const color = RAIL_COLORS[rlp.idx % RAIL_COLORS.length];
-
-        nicEdgeLayer.append('line')
-          .attr('class', 'nic-edge')
-          .attr('x1', nic.pos.x).attr('y1', nic.pos.y)
-          .attr('x2', nic.pos.x).attr('y2', nic.pos.y)
-          .attr('stroke', color)
-          .attr('stroke-width', 1.5)
-          .attr('stroke-opacity', 0)
-          .transition().duration(350).delay(50).ease(d3.easeCubicOut)
-          .attr('x2', leafPos.x).attr('y2', leafPos.y)
-          .attr('stroke-opacity', 0.55);
+        const nicPlane = nic.planes[0];
+        const leafInPlane = nic.idx % gpusPerPlane;
+        hostEdges.forEach(edge => {
+          if (isMRC && edge.plane !== nicPlane) return;
+          const leafId = edge.source === d.id ? edge.target : edge.source;
+          const leafPos = posLookup[leafId];
+          if (!leafPos) return;
+          const leafIdx = parseInt(leafId.split('-').pop()) || 0;
+          if (isMRC) {
+            if (typeof edge.gpuIdx === 'number' && edge.gpuIdx !== nic.idx) return;
+            if (typeof edge.gpuIdx !== 'number' && leafIdx !== leafInPlane) return;
+          } else {
+            if (leafIdx % gpus !== nic.idx % gpus) return;
+          }
+          const color = isMRC ? RAIL_COLORS[nicPlane % RAIL_COLORS.length] : RAIL_COLORS[nic.idx % RAIL_COLORS.length];
+          nicEdgeLayer.append('line').attr('class', 'nic-edge')
+            .attr('x1', nic.pos.x).attr('y1', nic.pos.y)
+            .attr('x2', nic.pos.x).attr('y2', nic.pos.y)
+            .attr('stroke', color).attr('stroke-width', 1.5).attr('stroke-opacity', 0)
+            .transition().duration(350).delay(50).ease(d3.easeCubicOut)
+            .attr('x2', leafPos.x).attr('y2', leafPos.y).attr('stroke-opacity', 0.6);
+        });
       } else {
+        // Fat-tree: all GPUs share the same leaf(s)
         nic.planes.forEach(planeIdx => {
           const edge = hostEdges.find(e => e.plane === planeIdx) || hostEdges[0];
           if (!edge) return;
           const leafId = edge.source === d.id ? edge.target : edge.source;
           const leafPos = posLookup[leafId];
           if (!leafPos) return;
-
-          const color = isMRC && pl > 1
-            ? RAIL_COLORS[planeIdx % RAIL_COLORS.length]
-            : (isDark ? '#888' : '#999');
-
-          nicEdgeLayer.append('line')
-            .attr('class', 'nic-edge')
+          const color = isMRC && pl > 1 ? RAIL_COLORS[planeIdx % RAIL_COLORS.length] : (isDark ? '#888' : '#999');
+          nicEdgeLayer.append('line').attr('class', 'nic-edge')
             .attr('x1', nic.pos.x).attr('y1', nic.pos.y)
             .attr('x2', nic.pos.x).attr('y2', nic.pos.y)
-            .attr('stroke', color)
-            .attr('stroke-width', 1.5)
-            .attr('stroke-opacity', 0)
+            .attr('stroke', color).attr('stroke-width', 1.5).attr('stroke-opacity', 0)
             .transition().duration(350).delay(50).ease(d3.easeCubicOut)
-            .attr('x2', leafPos.x).attr('y2', leafPos.y)
-            .attr('stroke-opacity', 0.55);
+            .attr('x2', leafPos.x).attr('y2', leafPos.y).attr('stroke-opacity', 0.6);
         });
       }
     });
 
+    // Draw GPU circles
     const nicGs = nicOverlayGroup.selectAll('g.nic-node')
-      .data(nics).join('g')
-      .attr('class', 'nic-node')
+      .data(nics).join('g').attr('class', 'nic-node')
       .attr('transform', 'translate(' + hostPos.x + ',' + hostPos.y + ')')
       .style('opacity', 0);
 
-    nicGs.append('circle')
-      .attr('r', 10)
+    nicGs.append('circle').attr('r', 10)
       .attr('fill', nd => {
-        if (isRailView && railLeafPositions) {
-          const rc = RAIL_COLORS[nd.idx % RAIL_COLORS.length];
-          return isDark ? shadeColor(rc, 0.55) : tintColor(rc, 0.75);
-        }
-        if (isMRC && pl > 1 && nd.planes.length === 1) {
-          return isDark
-            ? shadeColor(RAIL_COLORS[nd.planes[0] % RAIL_COLORS.length], 0.55)
-            : tintColor(RAIL_COLORS[nd.planes[0] % RAIL_COLORS.length], 0.75);
-        }
+        if (isRailView) { const rc = RAIL_COLORS[nd.idx % RAIL_COLORS.length]; return isDark ? shadeColor(rc, 0.55) : tintColor(rc, 0.75); }
+        if (isMRC && pl > 1 && nd.planes.length === 1) return isDark ? shadeColor(RAIL_COLORS[nd.planes[0] % 16], 0.55) : tintColor(RAIL_COLORS[nd.planes[0] % 16], 0.75);
         return v('--bg3');
       })
       .attr('stroke', nd => {
-        if (isRailView && railLeafPositions)
-          return RAIL_COLORS[nd.idx % RAIL_COLORS.length];
-        if (isMRC && pl > 1 && nd.planes.length === 1)
-          return RAIL_COLORS[nd.planes[0] % RAIL_COLORS.length];
+        if (isRailView) return RAIL_COLORS[nd.idx % RAIL_COLORS.length];
+        if (isMRC && pl > 1 && nd.planes.length === 1) return RAIL_COLORS[nd.planes[0] % 16];
         return v('--border');
       })
       .attr('stroke-width', 1.5);
 
-    nicGs.append('text')
-      .attr('dy', '0.35em')
-      .attr('text-anchor', 'middle')
-      .attr('fill', v('--text2'))
-      .attr('font-size', 8)
-      .attr('font-weight', 700)
-      .text(nd => nd.idx);
+    nicGs.append('text').attr('dy', '0.35em').attr('text-anchor', 'middle')
+      .attr('fill', v('--text2')).attr('font-size', 8).attr('font-weight', 700).text(nd => nd.idx);
 
     nicGs.transition().duration(350).ease(d3.easeCubicOut)
-      .attr('transform', nd => 'translate(' + nd.pos.x + ',' + nd.pos.y + ')')
-      .style('opacity', 1);
+      .attr('transform', nd => 'translate(' + nd.pos.x + ',' + nd.pos.y + ')').style('opacity', 1);
 
-    nicOverlayGroup.append('text')
-      .attr('class', 'nic-label')
-      .attr('x', hostPos.x).attr('y', nicY + 24)
-      .attr('text-anchor', 'middle')
-      .attr('fill', v('--text2'))
-      .attr('font-size', 9).attr('font-weight', 600)
-      .style('opacity', 0)
-      .text(isRailView
-        ? lpg + '× ' + speedLabel + ' link per rail'
-        : (pl > 1
-          ? (isBreakout ? 1 : Math.ceil(lpg / pl)) + '× ' + speedLabel + ' link per plane'
-          : lpg + '× ' + speedLabel + ' NIC per GPU'))
+    nicOverlayGroup.append('text').attr('class', 'nic-label')
+      .attr('x', hostPos.x).attr('y', nicY + 22).attr('text-anchor', 'middle')
+      .attr('fill', v('--text2')).attr('font-size', 9).attr('font-weight', 600).style('opacity', 0)
+      .text(gpus + ' GPUs · ' + h.linksPerNode + ' backend links · ' + speedLabel + (isRailView ? ' per rail' : ' per link'))
       .transition().duration(350).style('opacity', 1);
-
-    nicOverlayGroup.append('text')
-      .attr('class', 'nic-label')
-      .attr('x', hostPos.x).attr('y', nicY + 38)
-      .attr('text-anchor', 'middle')
-      .attr('fill', v('--text3'))
-      .attr('font-size', 8).attr('font-weight', 500)
-      .style('opacity', 0)
-      .text(gpus + ' GPUs · ' + h.linksPerNode + ' backend links')
-      .transition().duration(350).delay(100).style('opacity', 0.7);
   }
 
   nodeGs.on('mouseenter', function(event, d) {
