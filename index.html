@@ -704,7 +704,7 @@
 <div class="topbar">
   <div class="topbar-left">
     <div class="topbar-logo">AI</div>
-    <h1>AI Backend Network Calculator <span style="font-weight:400;font-size:14px;opacity:0.6">v1.3</span></h1>
+    <h1>AI Backend Network Calculator <span style="font-weight:400;font-size:14px;opacity:0.6">v1.3.1</span></h1>
   </div>
   <div class="topbar-right">
     <a href="#" onclick="event.preventDefault();document.getElementById('changelog-modal').classList.add('open')" title="What's new" style="color:var(--text3);margin-right:12px;display:inline-flex;align-items:center;gap:5px;font-size:13px;text-decoration:none;opacity:0.7;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
@@ -986,6 +986,11 @@
       <button style="background:none;border:none;cursor:pointer;color:var(--text3);padding:4px" onclick="document.getElementById('changelog-modal').classList.remove('open')"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="changelog-body">
+      <h3>v1.3.1 — July 2025</h3>
+      <ul>
+        <li><strong>NIC breakout topology fix</strong> — multi-plane rail view now correctly shows all GPUs connecting to every plane (e.g. 8×200G per plane instead of 4×200G); NIC expand animation updated to match</li>
+        <li><strong>Spine optics for breakout</strong> — spine-facing optics now show OSFP 800G 2DR4 (dual MPO-12) instead of DR8 (single MPO-16) when uplink breakout is active, matching the natural connector topology for 2:1 breakout</li>
+      </ul>
       <h3>v1.3 — July 2025</h3>
       <ul>
         <li><strong>Modular Spine Advantage</strong> — side-by-side comparison of modular 7800R4 chassis vs all-fixed designs showing platforms, rack space (RU), optics, and power with per-row highlighting and recommendation notes</li>
@@ -2039,11 +2044,12 @@ function calculate() {
     if (balanceNote) switchHtml += '<div class="note-box" style="margin-bottom:12px">' + balanceNote + '</div>';
 
     const spineBreakoutLabel = uplinkBreakout > 1 ? ', ' + uplinkBreakout + ':1' : '';
+    const spineOpticTier = uplinkBreakout > 1 ? undefined : 'spine';
     const spOptBase = spinePhysPerSide * 2;
     let optRows = [
       ['Leaf ↔ spine links', fmtN(spineLinks)],
-      ['In spine switch (leaf-facing' + spineBreakoutLabel + ') · ' + dualOptic(800, 'spine'), fmtN(spinePhysPerSide)],
-      ['In leaf switch (spine-facing' + spineBreakoutLabel + ') · ' + dualOptic(800, 'spine'), fmtN(spinePhysPerSide)],
+      ['In spine switch (leaf-facing' + spineBreakoutLabel + ') · ' + dualOptic(800, spineOpticTier), fmtN(spinePhysPerSide)],
+      ['In leaf switch (spine-facing' + spineBreakoutLabel + ') · ' + dualOptic(800, spineOpticTier), fmtN(spinePhysPerSide)],
       ['Fabric subtotal', fmtN(spOptBase), true],
       ['Host ↔ leaf links', fmtN(totalHostLinks), false, true]
     ];
@@ -2056,7 +2062,7 @@ function calculate() {
     optRows.push(['Host subtotal', fmtN(hOptBase), true]);
     optRows.push(['Grand total optics', fmtN(spOptBase + hOptBase), true]);
 
-    optHtml = opticsSection(optRows, '<span class="optic-conv">Spine: ' + opticType(800, 'spine') + (uplinkBreakout > 1 ? ' (' + uplinkBreakout + ':1 breakout)' : '') + ' · Host: ' + opticType(hostSpeedPerPlane) + '. Reach: ~500m (single-mode).</span><span class="optic-lpo">Spine: ' + opticTypeLPO(800, 'spine') + (uplinkBreakout > 1 ? ' (' + uplinkBreakout + ':1 breakout)' : '') + '. Leaf switch: ' + opticTypeLPO(hostSpeedPerPlane) + ', host NIC: ' + opticTypeNIC(hostSpeedPerPlane) + '. Reach: ~500m (single-mode).</span>');
+    optHtml = opticsSection(optRows, '<span class="optic-conv">Spine: ' + opticType(800, spineOpticTier) + (uplinkBreakout > 1 ? ' (' + uplinkBreakout + ':1 breakout)' : '') + ' · Host: ' + opticType(hostSpeedPerPlane) + '. Reach: ~500m (single-mode).</span><span class="optic-lpo">Spine: ' + opticTypeLPO(800, spineOpticTier) + (uplinkBreakout > 1 ? ' (' + uplinkBreakout + ':1 breakout)' : '') + '. Leaf switch: ' + opticTypeLPO(hostSpeedPerPlane) + ', host NIC: ' + opticTypeNIC(hostSpeedPerPlane) + '. Reach: ~500m (single-mode).</span>');
 
     const uplinksStr = `${Number.isInteger(bundleSize) ? bundleSize : bundleSize.toFixed(1)}× ${spineSpeed}G uplinks`;
     diagramHtml = diagHeader + buildDiagram([
@@ -2161,10 +2167,11 @@ function calculate() {
     ], 'Three-tier Clos: ' + pods + (pods === 1 ? ' pod' : ' pods') + ' per plane, ' + edgeLeavesPerPod + ' leaves + ' + aggPerPod + ' spines per pod.');
 
     const ssBreakoutLabel = uplinkBreakout > 1 ? ', ' + uplinkBreakout + ':1' : '';
+    const ssOpticTier = uplinkBreakout > 1 ? undefined : 'spine';
     let optRows = [
       ['Spine ↔ super-spine links', fmtN(a2sLinks)],
-      ['In super-spine (spine-facing' + ssBreakoutLabel + ') · ' + dualOptic(800, 'spine'), fmtN(a2sPhysPerSide)],
-      ['In spine (super-spine-facing' + ssBreakoutLabel + ') · ' + dualOptic(800, 'spine'), fmtN(a2sPhysPerSide)],
+      ['In super-spine (spine-facing' + ssBreakoutLabel + ') · ' + dualOptic(800, ssOpticTier), fmtN(a2sPhysPerSide)],
+      ['In spine (super-spine-facing' + ssBreakoutLabel + ') · ' + dualOptic(800, ssOpticTier), fmtN(a2sPhysPerSide)],
       ['Super-spine-tier subtotal', fmtN(a2sBase), true],
       ['Leaf ↔ spine links', fmtN(e2aLinks), false, true],
       ['In spine (leaf-facing) · ' + dualOptic(800, 'spine'), fmtN(e2aLinks)],
@@ -2182,7 +2189,7 @@ function calculate() {
     optRows.push(['Host subtotal', fmtN(hBase), true]);
     optRows.push(['Grand total optics', fmtN(a2sBase + e2aBase + hBase), true]);
 
-    optHtml = opticsSection(optRows, '<span class="optic-conv">Super-spine/spine: ' + opticType(800, 'spine') + (uplinkBreakout > 1 ? ' (' + uplinkBreakout + ':1 breakout)' : '') + ' · Host: ' + opticType(hostSpeedPerPlane) + '. Reach: ~500m (single-mode).</span><span class="optic-lpo">Super-spine/spine: ' + opticTypeLPO(800, 'spine') + (uplinkBreakout > 1 ? ' (' + uplinkBreakout + ':1 breakout)' : '') + '. Leaf: ' + opticTypeLPO(hostSpeedPerPlane) + ', host NIC: ' + opticTypeNIC(hostSpeedPerPlane) + '. Reach: ~500m (single-mode).</span>');
+    optHtml = opticsSection(optRows, '<span class="optic-conv">Super-spine/spine: ' + opticType(800, ssOpticTier) + (uplinkBreakout > 1 ? ' (' + uplinkBreakout + ':1 breakout)' : '') + ' · Host: ' + opticType(hostSpeedPerPlane) + '. Reach: ~500m (single-mode).</span><span class="optic-lpo">Super-spine/spine: ' + opticTypeLPO(800, ssOpticTier) + (uplinkBreakout > 1 ? ' (' + uplinkBreakout + ':1 breakout)' : '') + '. Leaf: ' + opticTypeLPO(hostSpeedPerPlane) + ', host NIC: ' + opticTypeNIC(hostSpeedPerPlane) + '. Reach: ~500m (single-mode).</span>');
 
     const e2aStr = `${Number.isInteger(e2aBundle) ? e2aBundle : e2aBundle.toFixed(1)}× ${spineSpeed}G links`;
     const a2sStr = `${Number.isInteger(a2sBundle) ? a2sBundle : a2sBundle.toFixed(1)}× ${spineSpeed}G links`;
@@ -2738,7 +2745,8 @@ function buildMRCTopoData() {
   const c = lastTopoConfig;
   const nodes = [], edges = [];
   const isRail = currentTopoType === 'rail';
-  const gpusPerPlane = Math.ceil((c.hosts.gpusPerNode || 8) / c.planes);
+  const isNicBrk = c.hosts.nicBreakout || false;
+  const gpusPerPlane = isNicBrk ? (c.hosts.gpusPerNode || 8) : Math.ceil((c.hosts.gpusPerNode || 8) / c.planes);
   const MAX_SHOW = isRail ? Math.max(6, gpusPerPlane) : 6;
   const planeCount = c.planes;
   const GAP_X = isRail && gpusPerPlane > 6 ? 100 : 120;
@@ -2982,7 +2990,7 @@ function buildMRCTopoData() {
 
       if (isMrcRail) {
         const gpus = c.hosts.gpusPerNode || 8;
-        const gpusThisPlane = Math.ceil(gpus / planeCount);
+        const gpusThisPlane = isNicBrk ? gpus : Math.ceil(gpus / planeCount);
         const totalLeaves = bottomTier.perPlane;
         const totalNodesEst = Math.round(totalLeaves * c.hosts.perLeaf / c.hosts.linksPerNode);
         const nodesPerLeaf = Math.max(1, Math.ceil(totalNodesEst / totalLeaves));
@@ -2995,7 +3003,7 @@ function buildMRCTopoData() {
               source: 'p' + p + '-' + bottomTier.id + '-' + leafNum, target: hn.id,
               label: '1×' + (hostLink ? hostLink.speed : 400) + 'G',
               weight: 1, bundle: 1, speed: hostLink ? hostLink.speed : 400, plane: p,
-              gpuIdx: p * gpusThisPlane + gi
+              gpuIdx: isNicBrk ? gi : p * gpusThisPlane + gi
             });
           }
         }
@@ -3883,12 +3891,16 @@ function renderTopology() {
     nicOverlayGroup._edgeLayer = nicEdgeLayer;
 
     // Build NIC data — determine which plane/leaf each GPU connects to
-    const gpusPerPlane = Math.ceil(gpus / pl);
+    const gpusPerPlane = isBreakout ? gpus : Math.ceil(gpus / pl);
     const nics = [];
     for (let gi = 0; gi < gpus; gi++) {
       const nicPlanes = [];
       if (isRailView && pl > 1) {
-        nicPlanes.push(Math.floor(gi / gpusPerPlane));
+        if (isBreakout) {
+          for (let p = 0; p < pl; p++) nicPlanes.push(p);
+        } else {
+          nicPlanes.push(Math.floor(gi / gpusPerPlane));
+        }
       } else if (pl <= 1) {
         nicPlanes.push(0);
       } else if (isBreakout || lpg >= pl) {
@@ -3902,27 +3914,28 @@ function renderTopology() {
     // Draw lines from each NIC to its connected leaf(s)
     nics.forEach(nic => {
       if (isRailView) {
-        const nicPlane = nic.planes[0];
-        const leafInPlane = nic.idx % gpusPerPlane;
-        hostEdges.forEach(edge => {
-          if (isMRC && edge.plane !== nicPlane) return;
-          const leafId = edge.source === d.id ? edge.target : edge.source;
-          const leafPos = posLookup[leafId];
-          if (!leafPos) return;
-          const leafIdx = parseInt(leafId.split('-').pop()) || 0;
-          if (isMRC) {
-            if (typeof edge.gpuIdx === 'number' && edge.gpuIdx !== nic.idx) return;
-            if (typeof edge.gpuIdx !== 'number' && leafIdx !== leafInPlane) return;
-          } else {
-            if (leafIdx % gpus !== nic.idx % gpus) return;
-          }
-          const color = isMRC ? RAIL_COLORS[nicPlane % RAIL_COLORS.length] : RAIL_COLORS[nic.idx % RAIL_COLORS.length];
-          nicEdgeLayer.append('line').attr('class', 'nic-edge')
-            .attr('x1', nic.pos.x).attr('y1', nic.pos.y)
-            .attr('x2', nic.pos.x).attr('y2', nic.pos.y)
-            .attr('stroke', color).attr('stroke-width', 1.5).attr('stroke-opacity', 0)
-            .transition().duration(350).delay(50).ease(d3.easeCubicOut)
-            .attr('x2', leafPos.x).attr('y2', leafPos.y).attr('stroke-opacity', 0.6);
+        nic.planes.forEach(nicPlane => {
+          const leafInPlane = nic.idx % gpusPerPlane;
+          hostEdges.forEach(edge => {
+            if (isMRC && edge.plane !== nicPlane) return;
+            const leafId = edge.source === d.id ? edge.target : edge.source;
+            const leafPos = posLookup[leafId];
+            if (!leafPos) return;
+            const leafIdx = parseInt(leafId.split('-').pop()) || 0;
+            if (isMRC) {
+              if (typeof edge.gpuIdx === 'number' && edge.gpuIdx !== nic.idx) return;
+              if (typeof edge.gpuIdx !== 'number' && leafIdx !== leafInPlane) return;
+            } else {
+              if (leafIdx % gpus !== nic.idx % gpus) return;
+            }
+            const color = isMRC ? RAIL_COLORS[nicPlane % RAIL_COLORS.length] : RAIL_COLORS[nic.idx % RAIL_COLORS.length];
+            nicEdgeLayer.append('line').attr('class', 'nic-edge')
+              .attr('x1', nic.pos.x).attr('y1', nic.pos.y)
+              .attr('x2', nic.pos.x).attr('y2', nic.pos.y)
+              .attr('stroke', color).attr('stroke-width', 1.5).attr('stroke-opacity', 0)
+              .transition().duration(350).delay(50).ease(d3.easeCubicOut)
+              .attr('x2', leafPos.x).attr('y2', leafPos.y).attr('stroke-opacity', 0.6);
+          });
         });
       } else {
         // Fat-tree: all GPUs share the same leaf(s)
