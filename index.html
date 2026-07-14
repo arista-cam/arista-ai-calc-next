@@ -537,6 +537,23 @@
   .optic-toggle-btn.active, .power-toggle-btn.active { background: var(--primary); color: #fff; }
   .optic-toggle-btn:not(.active):hover, .power-toggle-btn:not(.active):hover { background: var(--bg3); }
 
+  .results-tabs {
+    display: flex; border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; margin-bottom: 16px; background: var(--bg2);
+  }
+  .results-tab-btn {
+    flex: 1; padding: 8px 12px; font-size: 12px; font-weight: 600; font-family: inherit;
+    border: none; cursor: pointer; background: var(--bg2); color: var(--text2);
+    transition: all 0.15s; white-space: nowrap; text-align: center;
+  }
+  .results-tab-btn:not(:last-child) { border-right: 1px solid var(--border); }
+  .results-tab-btn.active { background: var(--primary); color: #fff; }
+  .results-tab-btn:not(.active):hover { background: var(--bg3); }
+  .results-tab-panel { display: none; }
+  .results-tab-panel.active { display: block; }
+  @media print { .results-tab-panel { display: block !important; } .results-tabs { display: none; } }
+  @media (max-width: 520px) { .results-tab-btn { font-size: 11px; padding: 7px 8px; } }
+
   [data-optic-mode="conventional"] .optic-lpo,
   [data-optic-mode="lpo"] .optic-conv { display: none !important; }
   [data-power-mode="typical"] .power-80,
@@ -704,7 +721,7 @@
 <div class="topbar">
   <div class="topbar-left">
     <div class="topbar-logo">AI</div>
-    <h1>AI Backend Network Calculator <span style="font-weight:400;font-size:14px;opacity:0.6">v1.3.1</span></h1>
+    <h1>AI Backend Network Calculator <span style="font-weight:400;font-size:14px;opacity:0.6">v1.4</span></h1>
   </div>
   <div class="topbar-right">
     <a href="#" onclick="event.preventDefault();document.getElementById('changelog-modal').classList.add('open')" title="What's new" style="color:var(--text3);margin-right:12px;display:inline-flex;align-items:center;gap:5px;font-size:13px;text-decoration:none;opacity:0.7;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
@@ -986,8 +1003,9 @@
       <button style="background:none;border:none;cursor:pointer;color:var(--text3);padding:4px" onclick="document.getElementById('changelog-modal').classList.remove('open')"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="changelog-body">
-      <h3>v1.3.1 — July 2025</h3>
+      <h3>v1.4 — July 2025</h3>
       <ul>
+        <li><strong>Tabbed results pane</strong> — results organized into Summary, Fabric, Optics, and Power tabs to reduce clutter; selected tab persists across recalculations</li>
         <li><strong>NIC breakout topology fix</strong> — multi-plane rail view now correctly shows all GPUs connecting to every plane (e.g. 8×200G per plane instead of 4×200G); NIC expand animation updated to match</li>
         <li><strong>Spine optics for breakout</strong> — spine-facing optics now show OSFP 800G 2DR4 (dual MPO-12) instead of DR8 (single MPO-16) when uplink breakout is active, matching the natural connector topology for 2:1 breakout</li>
       </ul>
@@ -1230,6 +1248,7 @@ function clearResults() {
 }
 
 function resetInputs() {
+  activeResultsTab = 'summary';
   document.getElementById('total-gpus').value = '';
   document.getElementById('num-nodes').value = '';
   document.getElementById('gpus-per-node').value = 8;
@@ -1684,6 +1703,13 @@ function toggleOpticMode(mode) {
 function togglePowerMode(mode) {
   document.querySelectorAll('.power-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
   document.getElementById('results').dataset.powerMode = mode;
+}
+
+let activeResultsTab = 'summary';
+function switchResultsTab(tabId) {
+  activeResultsTab = tabId;
+  document.querySelectorAll('.results-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+  document.querySelectorAll('.results-tab-panel').forEach(p => p.classList.toggle('active', p.dataset.tab === tabId));
 }
 
 function fmtN(n) { return Math.round(n).toLocaleString(); }
@@ -2313,51 +2339,54 @@ function calculate() {
     out += '</div>';
   }
 
-  out += '<div class="metrics-grid">';
-  out += metric(fmtN(gpus),          'Total GPUs',     (selGpu && selGpu.id !== 'custom') ? selGpu.name : '');
-  out += metric(fmtN(totalHostLinks),'Backend Links',   linksPerGpu + ' per GPU', 'Total backend network links. Each GPU connects to the fabric with ' + linksPerGpu + ' link(s)');
+  let summaryContent = '';
+  let fabricContent = '';
+
+  summaryContent += '<div class="metrics-grid">';
+  summaryContent += metric(fmtN(gpus),          'Total GPUs',     (selGpu && selGpu.id !== 'custom') ? selGpu.name : '');
+  summaryContent += metric(fmtN(totalHostLinks),'Backend Links',   linksPerGpu + ' per GPU', 'Total backend network links. Each GPU connects to the fabric with ' + linksPerGpu + ' link(s)');
   if (planes > 1) {
     const bwPerPlane = nicBreakout ? (hostSpeed * linksPerGpu / planes) : hostSpeedPerPlane;
     const bwTotal = hostSpeed * linksPerGpu;
     const bwPlaneStr = Number.isInteger(bwPerPlane) ? bwPerPlane + 'G' : bwPerPlane.toFixed(1) + 'G';
-    out += metric(bwPlaneStr, 'BW / GPU / Plane', nicBreakout ? (linksPerGpu + ' links ÷ ' + planes + ' planes') : ('1 link @ ' + hostSpeedPerPlane + 'G'), nicBreakout ? 'Each NIC breaks out across ' + planes + ' planes at reduced speed' : 'Each GPU connects to one plane at full speed. GPUs distributed across planes');
-    out += metric(bwTotal + 'G', 'Aggregate BW / GPU', planes + ' planes × ' + bwPlaneStr, 'Total bandwidth per GPU across all planes combined');
+    summaryContent += metric(bwPlaneStr, 'BW / GPU / Plane', nicBreakout ? (linksPerGpu + ' links ÷ ' + planes + ' planes') : ('1 link @ ' + hostSpeedPerPlane + 'G'), nicBreakout ? 'Each NIC breaks out across ' + planes + ' planes at reduced speed' : 'Each GPU connects to one plane at full speed. GPUs distributed across planes');
+    summaryContent += metric(bwTotal + 'G', 'Aggregate BW / GPU', planes + ' planes × ' + bwPlaneStr, 'Total bandwidth per GPU across all planes combined');
   }
   if (tierNum === 4) {
-    out += metric(fmtN(totalLeaf),   'DES Leaves',      'across planes');
-    out += metric(fmtN(totalSpine),  'DES Spines',      'across planes');
-    out += metric(fmtN(totalSwitches), 'Total devices', '');
-    out += metric('1:1', 'Subscription', 'non-blocking fabric', 'DES fabrics are always non-blocking — every host port has full-rate access to the fabric');
+    summaryContent += metric(fmtN(totalLeaf),   'DES Leaves',      'across planes');
+    summaryContent += metric(fmtN(totalSpine),  'DES Spines',      'across planes');
+    summaryContent += metric(fmtN(totalSwitches), 'Total devices', '');
+    summaryContent += metric('1:1', 'Subscription', 'non-blocking fabric', 'DES fabrics are always non-blocking — every host port has full-rate access to the fabric');
   } else {
-    out += metric(fmtN(totalSpine),    tierNum === 3 ? 'Super-spines' : 'Spine switches', 'across planes');
-    out += metric(totalLeaf > 0 ? fmtN(totalLeaf) : '—', tierNum === 3 ? 'Spine + Leaf' : 'Leaf switches', totalLeaf > 0 ? 'across planes' : 'not needed');
-    out += metric(fmtN(totalSwitches), 'Total switches', 'all tiers');
+    summaryContent += metric(fmtN(totalSpine),    tierNum === 3 ? 'Super-spines' : 'Spine switches', 'across planes');
+    summaryContent += metric(totalLeaf > 0 ? fmtN(totalLeaf) : '—', tierNum === 3 ? 'Spine + Leaf' : 'Leaf switches', totalLeaf > 0 ? 'across planes' : 'not needed');
+    summaryContent += metric(fmtN(totalSwitches), 'Total switches', 'all tiers');
     if (tierNum >= 2 && tierNum <= 3) {
       const subRatio = physDownlinks / uplinks;
-      out += metric(subRatio === 1 ? '1:1' : subRatio.toFixed(2) + ':1', 'Subscription', 'down:up port ratio', 'Ratio of downlink (host-facing) to uplink (fabric-facing) ports per leaf. 1:1 means non-blocking — every downlink has a matching uplink');
+      summaryContent += metric(subRatio === 1 ? '1:1' : subRatio.toFixed(2) + ':1', 'Subscription', 'down:up port ratio', 'Ratio of downlink (host-facing) to uplink (fabric-facing) ports per leaf. 1:1 means non-blocking — every downlink has a matching uplink');
     }
     if (tierNum === 3) {
-      out += metric(fmtN(pods * planes), 'Pods', pods + ' per plane', 'A pod is a group of leaves and spines fully meshed together. Pods scale the fabric horizontally');
+      summaryContent += metric(fmtN(pods * planes), 'Pods', pods + ' per plane', 'A pod is a group of leaves and spines fully meshed together. Pods scale the fabric horizontally');
     }
   }
-  out += '</div>';
+  summaryContent += '</div>';
 
   if (planes > 1) {
     const perPlaneSpeed = hostSpeedPerPlane;
-    out += '<div class="mrc-box">';
-    out += '<div class="mrc-title"><strong>Multi-Plane Design</strong> — ' + planes + ' planes × ' + perPlaneSpeed + 'G per link</div>';
-    out += '<div class="mrc-details">';
+    summaryContent += '<div class="mrc-box">';
+    summaryContent += '<div class="mrc-title"><strong>Multi-Plane Design</strong> — ' + planes + ' planes × ' + perPlaneSpeed + 'G per link</div>';
+    summaryContent += '<div class="mrc-details">';
     const tierDesc = tierNum === 3 ? 'three-tier' : tierNum === 4 ? 'DES' : 'two-tier';
-    out += '<span>Each plane is an independent ' + tierDesc + ' fabric' + tip('The cluster is divided into ' + planes + ' separate ' + tierDesc + ' fabrics, each operating independently') + '</span>';
-    out += '<span>NICs spray packets across all ' + planes + ' planes' + tip('Each host NIC distributes packets across all planes using packet spraying for load balancing') + '</span>';
-    out += '</div>';
-    out += '<div class="mrc-benefits">';
-    out += '<span class="mrc-benefit">Path diversity (' + planes + '× paths)' + tip('Traffic has ' + planes + ' independent paths through the fabric, reducing congestion and improving throughput') + '</span>';
-    out += '<span class="mrc-benefit">Plane-level fault tolerance' + tip('If one plane fails, the remaining ' + (planes - 1) + ' plane(s) continue to carry traffic with no reconfiguration') + '</span>';
-    out += '<span class="mrc-benefit">' + (tierNum === 3 ? 'Pod-based scale-out per plane' : tierNum === 4 ? 'DES simplicity per plane' : 'Two-tier simplicity per plane') + tip(tierNum === 3 ? 'Each plane is a full three-tier Clos with pods that scale independently' : tierNum === 4 ? 'Each plane is a self-contained DES fabric with fixed leaf/spine modules' : 'Each plane is a simple leaf-spine fabric that is easier to manage and troubleshoot') + '</span>';
-    out += '<span class="mrc-benefit">Smaller radix switches' + tip('Splitting traffic across planes means each plane handles fewer hosts, so smaller (lower-radix) switches can be used') + '</span>';
-    out += '</div>';
-    out += '</div>';
+    summaryContent += '<span>Each plane is an independent ' + tierDesc + ' fabric' + tip('The cluster is divided into ' + planes + ' separate ' + tierDesc + ' fabrics, each operating independently') + '</span>';
+    summaryContent += '<span>NICs spray packets across all ' + planes + ' planes' + tip('Each host NIC distributes packets across all planes using packet spraying for load balancing') + '</span>';
+    summaryContent += '</div>';
+    summaryContent += '<div class="mrc-benefits">';
+    summaryContent += '<span class="mrc-benefit">Path diversity (' + planes + '× paths)' + tip('Traffic has ' + planes + ' independent paths through the fabric, reducing congestion and improving throughput') + '</span>';
+    summaryContent += '<span class="mrc-benefit">Plane-level fault tolerance' + tip('If one plane fails, the remaining ' + (planes - 1) + ' plane(s) continue to carry traffic with no reconfiguration') + '</span>';
+    summaryContent += '<span class="mrc-benefit">' + (tierNum === 3 ? 'Pod-based scale-out per plane' : tierNum === 4 ? 'DES simplicity per plane' : 'Two-tier simplicity per plane') + tip(tierNum === 3 ? 'Each plane is a full three-tier Clos with pods that scale independently' : tierNum === 4 ? 'Each plane is a self-contained DES fabric with fixed leaf/spine modules' : 'Each plane is a simple leaf-spine fabric that is easier to manage and troubleshoot') + '</span>';
+    summaryContent += '<span class="mrc-benefit">Smaller radix switches' + tip('Splitting traffic across planes means each plane handles fewer hosts, so smaller (lower-radix) switches can be used') + '</span>';
+    summaryContent += '</div>';
+    summaryContent += '</div>';
   }
 
   if (tierNum === 2) {
@@ -2365,16 +2394,16 @@ function calculate() {
     const maxGpusPerPlane = Math.floor(maxHostLinksPerPlane / linksPerGpu);
     const maxGpusTotal = maxGpusPerPlane * planes;
     const utilPct = Math.round((gpus / maxGpusTotal) * 100);
-    out += '<div class="note-box" style="margin-bottom:16px">';
-    out += '<strong>Two-Tier Max Scale:</strong> ';
-    out += fmtN(maxGpusTotal) + ' GPUs';
-    if (planes > 1) out += ' (' + fmtN(maxGpusPerPlane) + ' per plane × ' + planes + ' planes)';
-    out += ' — using ' + utilPct + '% capacity';
+    fabricContent += '<div class="note-box" style="margin-bottom:16px">';
+    fabricContent += '<strong>Two-Tier Max Scale:</strong> ';
+    fabricContent += fmtN(maxGpusTotal) + ' GPUs';
+    if (planes > 1) fabricContent += ' (' + fmtN(maxGpusPerPlane) + ' per plane × ' + planes + ' planes)';
+    fabricContent += ' — using ' + utilPct + '% capacity';
     if (gpus > maxGpusTotal) {
-      out += '<br><span style="color:var(--coral600);font-weight:500">⚠ Current cluster (' + fmtN(gpus) + ' GPUs) exceeds two-tier capacity. Consider three-tier or larger switches.</span>';
+      fabricContent += '<br><span style="color:var(--coral600);font-weight:500">⚠ Current cluster (' + fmtN(gpus) + ' GPUs) exceeds two-tier capacity. Consider three-tier or larger switches.</span>';
     }
-    out += '<br><span style="color:var(--text3);font-size:11px">Formula: spine ports (' + effSpineRadix + (uplinkBreakout > 1 ? ' eff' : '') + ') × leaf downlinks (' + effDownlinks + ') ÷ links/GPU (' + linksPerGpu + ')' + (planes > 1 ? ' × planes (' + planes + ')' : '') + '</span>';
-    out += '</div>';
+    fabricContent += '<br><span style="color:var(--text3);font-size:11px">Formula: spine ports (' + effSpineRadix + (uplinkBreakout > 1 ? ' eff' : '') + ') × leaf downlinks (' + effDownlinks + ') ÷ links/GPU (' + linksPerGpu + ')' + (planes > 1 ? ' × planes (' + planes + ')' : '') + '</span>';
+    fabricContent += '</div>';
 
     if (planes > 1) {
       const spLinksAll = totalHostLinks;
@@ -2389,28 +2418,28 @@ function calculate() {
       const mpSpinePP = Math.ceil((mpLeafPP * effUplinks) / effSpineRadix);
       const mpTotalSw = (mpLeafPP + mpSpinePP) * planes;
 
-      out += '<div class="mrc-comparison">';
+      fabricContent += '<div class="mrc-comparison">';
 
-      out += '<div class="mrc-compare-card">';
-      out += '<h4>Single Plane Design' + tip('What the fabric would look like with all hosts on one plane (no multi-plane)') + '</h4>';
-      out += '<div class="stat-row"><span class="stat-label">Leaf switches' + tip('Leaf switches needed to connect all hosts on a single fabric') + '</span><span class="stat-value">' + fmtN(spLeafPP) + '</span></div>';
-      out += '<div class="stat-row"><span class="stat-label">Spine switches' + tip('Spine switches needed to interconnect all leaves on one fabric') + '</span><span class="stat-value">' + fmtN(spSpineCount) + '</span></div>';
-      out += '<div class="stat-row"><span class="stat-label">Total switches</span><span class="stat-value">' + fmtN(spTotalSw) + '</span></div>';
-      out += '<div class="stat-row"><span class="stat-label">Max scale' + tip('Maximum GPUs this switch combination supports in two-tier: spine radix × leaf downlinks ÷ links per GPU') + '</span><span class="stat-value">' + fmtN(spMaxGpus) + ' GPUs</span></div>';
-      if (spExceeds) out += '<div class="exceeds-warning">⚠ Exceeds two-tier capacity — would require three-tier</div>';
-      else out += '<div class="stat-note">All traffic on a single fabric — no NIC spraying required, but single point of failure per path</div>';
-      out += '</div>';
+      fabricContent += '<div class="mrc-compare-card">';
+      fabricContent += '<h4>Single Plane Design' + tip('What the fabric would look like with all hosts on one plane (no multi-plane)') + '</h4>';
+      fabricContent += '<div class="stat-row"><span class="stat-label">Leaf switches' + tip('Leaf switches needed to connect all hosts on a single fabric') + '</span><span class="stat-value">' + fmtN(spLeafPP) + '</span></div>';
+      fabricContent += '<div class="stat-row"><span class="stat-label">Spine switches' + tip('Spine switches needed to interconnect all leaves on one fabric') + '</span><span class="stat-value">' + fmtN(spSpineCount) + '</span></div>';
+      fabricContent += '<div class="stat-row"><span class="stat-label">Total switches</span><span class="stat-value">' + fmtN(spTotalSw) + '</span></div>';
+      fabricContent += '<div class="stat-row"><span class="stat-label">Max scale' + tip('Maximum GPUs this switch combination supports in two-tier: spine radix × leaf downlinks ÷ links per GPU') + '</span><span class="stat-value">' + fmtN(spMaxGpus) + ' GPUs</span></div>';
+      if (spExceeds) fabricContent += '<div class="exceeds-warning">⚠ Exceeds two-tier capacity — would require three-tier</div>';
+      else fabricContent += '<div class="stat-note">All traffic on a single fabric — no NIC spraying required, but single point of failure per path</div>';
+      fabricContent += '</div>';
 
-      out += '<div class="mrc-compare-card active">';
-      out += '<h4>' + planes + '-Plane Design ✓' + tip('Your selected design: traffic is sprayed across ' + planes + ' independent parallel fabrics') + '</h4>';
-      out += '<div class="stat-row"><span class="stat-label">Leaves / plane' + tip('Leaf switches per plane — fewer than single-plane because hosts are spread across planes') + '</span><span class="stat-value">' + fmtN(mpLeafPP) + '</span></div>';
-      out += '<div class="stat-row"><span class="stat-label">Spines / plane' + tip('Spine switches per plane — smaller planes need fewer spines') + '</span><span class="stat-value">' + fmtN(mpSpinePP) + '</span></div>';
-      out += '<div class="stat-row"><span class="stat-label">Total switches' + tip('Total switches across all ' + planes + ' planes combined') + '</span><span class="stat-value">' + fmtN(mpTotalSw) + ' (' + planes + '×' + fmtN(mpLeafPP + mpSpinePP) + ')</span></div>';
-      out += '<div class="stat-row"><span class="stat-label">Max scale' + tip('Maximum GPUs across all planes: per-plane capacity × number of planes') + '</span><span class="stat-value">' + fmtN(maxGpusTotal) + ' GPUs</span></div>';
-      out += '<div class="stat-note">Packet spraying across ' + planes + ' independent fabrics — plane-level fault isolation, ' + planes + '× path diversity</div>';
-      out += '</div>';
+      fabricContent += '<div class="mrc-compare-card active">';
+      fabricContent += '<h4>' + planes + '-Plane Design ✓' + tip('Your selected design: traffic is sprayed across ' + planes + ' independent parallel fabrics') + '</h4>';
+      fabricContent += '<div class="stat-row"><span class="stat-label">Leaves / plane' + tip('Leaf switches per plane — fewer than single-plane because hosts are spread across planes') + '</span><span class="stat-value">' + fmtN(mpLeafPP) + '</span></div>';
+      fabricContent += '<div class="stat-row"><span class="stat-label">Spines / plane' + tip('Spine switches per plane — smaller planes need fewer spines') + '</span><span class="stat-value">' + fmtN(mpSpinePP) + '</span></div>';
+      fabricContent += '<div class="stat-row"><span class="stat-label">Total switches' + tip('Total switches across all ' + planes + ' planes combined') + '</span><span class="stat-value">' + fmtN(mpTotalSw) + ' (' + planes + '×' + fmtN(mpLeafPP + mpSpinePP) + ')</span></div>';
+      fabricContent += '<div class="stat-row"><span class="stat-label">Max scale' + tip('Maximum GPUs across all planes: per-plane capacity × number of planes') + '</span><span class="stat-value">' + fmtN(maxGpusTotal) + ' GPUs</span></div>';
+      fabricContent += '<div class="stat-note">Packet spraying across ' + planes + ' independent fabrics — plane-level fault isolation, ' + planes + '× path diversity</div>';
+      fabricContent += '</div>';
 
-      out += '</div>';
+      fabricContent += '</div>';
     }
   }
 
@@ -2548,29 +2577,29 @@ function calculate() {
       const modWinCount = (modular.total < fixed.total ? 1 : 0) + (modular.ru < fixed.ru ? 1 : 0) + (modular.optics < fixed.optics ? 1 : 0) + (modular.power < fixed.power ? 1 : 0);
       const modIsRecommended = modWinCount >= 3 || modular.tier < fixed.tier;
 
-      out += '<div class="result-section"><h3>' + iconServer() + 'Modular Spine Advantage</h3>';
-      out += '<div class="mrc-comparison">';
+      summaryContent += '<div class="result-section"><h3>' + iconServer() + 'Modular Spine Advantage</h3>';
+      summaryContent += '<div class="mrc-comparison">';
 
-      out += '<div class="mrc-compare-card' + (!modIsRecommended ? ' active' : '') + '">';
-      out += '<h4>' + (isCurrentModular ? altLabel : curLabel) + (!modIsRecommended ? ' ✓' : '') + '</h4>';
-      rows.forEach(r => { out += r.fHtml; });
-      if (fixed.tier === 3 && modular.tier <= 2) out += '<div class="exceeds-warning">Requires 3-tier (super-spine + spine + leaf)</div>';
-      out += '</div>';
+      summaryContent += '<div class="mrc-compare-card' + (!modIsRecommended ? ' active' : '') + '">';
+      summaryContent += '<h4>' + (isCurrentModular ? altLabel : curLabel) + (!modIsRecommended ? ' ✓' : '') + '</h4>';
+      rows.forEach(r => { summaryContent += r.fHtml; });
+      if (fixed.tier === 3 && modular.tier <= 2) summaryContent += '<div class="exceeds-warning">Requires 3-tier (super-spine + spine + leaf)</div>';
+      summaryContent += '</div>';
 
-      out += '<div class="mrc-compare-card' + (modIsRecommended ? ' active' : '') + '">';
-      out += '<h4>' + (isCurrentModular ? curLabel : altLabel) + (modIsRecommended ? ' ✓' : '') + '</h4>';
-      rows.forEach(r => { out += r.mHtml; });
-      if (alt.maxScale > 0) out += '<div class="stat-row"><span class="stat-label">Max scale</span><span class="stat-value" style="color:var(--teal600);font-weight:700">' + fmtN(alt.maxScale) + ' GPUs</span></div>';
+      summaryContent += '<div class="mrc-compare-card' + (modIsRecommended ? ' active' : '') + '">';
+      summaryContent += '<h4>' + (isCurrentModular ? curLabel : altLabel) + (modIsRecommended ? ' ✓' : '') + '</h4>';
+      rows.forEach(r => { summaryContent += r.mHtml; });
+      if (alt.maxScale > 0) summaryContent += '<div class="stat-row"><span class="stat-label">Max scale</span><span class="stat-value" style="color:var(--teal600);font-weight:700">' + fmtN(alt.maxScale) + ' GPUs</span></div>';
       if (modIsRecommended) {
         let recNote = 'A modular chassis spine is the recommended approach for this cluster size — delivering fewer platforms, less rack space, and a simpler fabric.';
         if (alt.tier === 1) recNote = 'This cluster fits in a single ' + alt.spName + ' chassis — no leaf-spine cabling, fewer optics, simpler management. Consider a collapsed single-tier design.';
         else if (fixed.tier === 3 && modular.tier <= 2) recNote = 'A modular chassis spine eliminates the need for a 3-tier design — reducing complexity, cabling, and total cost of ownership.';
-        out += '<div class="stat-note" style="background:var(--teal50);color:var(--teal800);padding:8px 12px;border-radius:var(--radius);margin-top:8px;font-weight:600">' + recNote + '</div>';
+        summaryContent += '<div class="stat-note" style="background:var(--teal50);color:var(--teal800);padding:8px 12px;border-radius:var(--radius);margin-top:8px;font-weight:600">' + recNote + '</div>';
       }
-      out += '</div>';
-      out += '</div>';
+      summaryContent += '</div>';
+      summaryContent += '</div>';
 
-      out += '</div>';
+      summaryContent += '</div>';
     }
   }
 
@@ -2668,7 +2697,18 @@ function calculate() {
   powerHtml += '<div class="note-box">Power figures are estimates based on Arista platform datasheets. Switch power: typical at 25°C/50% load, max at 40°C/100% load (excluding optics). OpEx/CapEx savings are illustrative estimates — actual costs vary by vendor and region.</div>';
   powerHtml += '</div>';
 
-  out += switchHtml + optHtml + powerHtml;
+  fabricContent = switchHtml + fabricContent;
+
+  out += '<div class="results-tabs">';
+  out += '<button class="results-tab-btn' + (activeResultsTab === 'summary' ? ' active' : '') + '" data-tab="summary" onclick="switchResultsTab(\'summary\')">Summary</button>';
+  out += '<button class="results-tab-btn' + (activeResultsTab === 'fabric' ? ' active' : '') + '" data-tab="fabric" onclick="switchResultsTab(\'fabric\')">Fabric</button>';
+  out += '<button class="results-tab-btn' + (activeResultsTab === 'optics' ? ' active' : '') + '" data-tab="optics" onclick="switchResultsTab(\'optics\')">Optics</button>';
+  out += '<button class="results-tab-btn' + (activeResultsTab === 'power' ? ' active' : '') + '" data-tab="power" onclick="switchResultsTab(\'power\')">Power</button>';
+  out += '</div>';
+  out += '<div class="results-tab-panel' + (activeResultsTab === 'summary' ? ' active' : '') + '" data-tab="summary">' + summaryContent + '</div>';
+  out += '<div class="results-tab-panel' + (activeResultsTab === 'fabric' ? ' active' : '') + '" data-tab="fabric">' + fabricContent + '</div>';
+  out += '<div class="results-tab-panel' + (activeResultsTab === 'optics' ? ' active' : '') + '" data-tab="optics">' + optHtml + '</div>';
+  out += '<div class="results-tab-panel' + (activeResultsTab === 'power' ? ' active' : '') + '" data-tab="power">' + powerHtml + '</div>';
 
   el.dataset.opticMode = 'conventional';
   el.dataset.powerMode = 'eightyPct';
