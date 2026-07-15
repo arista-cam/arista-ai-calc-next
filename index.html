@@ -1076,6 +1076,9 @@
     <div class="changelog-body">
       <h3>v1.4.2 — July 2025</h3>
       <ul>
+        <li><strong>Frontend topology packing</strong> — hosts now correctly fan into frontend leaves based on port capacity (e.g. 6 hosts per 48-port leaf at 8 links/host) instead of 1:1 round-robin</li>
+        <li><strong>Backend/Frontend divider</strong> — dashed separator line with BACKEND/FRONTEND labels in the topology view</li>
+        <li><strong>Optics &amp; Power tab</strong> — merged into a single tab with backend optics+power grouped together and frontend optics+power grouped together, so the LPO toggle immediately reflects in power figures</li>
         <li><strong>Host ellipsis count</strong> — host row ellipsis in topology now shows omitted count (e.g. "…+12 more") consistent with other tiers</li>
         <li><strong>Frontend topology tooltip fix</strong> — frontend leaf connection counts now use actual host totals instead of displayed node count</li>
       </ul>
@@ -3002,26 +3005,24 @@ function calculate() {
     fabricContent = '<div class="network-header backend">Backend Network</div>' + fabricContent;
     fabricContent += '<div class="network-divider"></div><div class="network-header frontend">Frontend Network</div>' + feResult.switchHtml;
 
-    optHtml = '<div class="network-header backend">Backend Network</div>' + optHtml;
-    optHtml += '<div class="network-divider"></div><div class="network-header frontend">Frontend Network</div>' + feResult.optHtml;
-
-    powerHtml = '<div class="network-header backend">Backend Network</div>' + powerHtml;
-    powerHtml += '<div class="network-divider"></div><div class="network-header frontend">Frontend Network</div>' + feResult.powerHtml;
+    const beOptPower = '<div class="network-header backend">Backend Network</div>' + optHtml + powerHtml;
+    const feOptPower = '<div class="network-divider"></div><div class="network-header frontend">Frontend Network</div>' + feResult.optHtml + feResult.powerHtml;
+    optHtml = beOptPower + feOptPower;
+    powerHtml = '';
 
     const feDiagHeader = '<div class="diagram-wrapper" style="margin-top:16px"><div class="diag-title"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Front-End Logical Data Path</div>';
     diagramHtml += feDiagHeader + buildDiagram(feResult.diagNodes, 1) + '</div>';
   }
 
+  if (activeResultsTab === 'power') activeResultsTab = 'optics';
   out += '<div class="results-tabs">';
   out += '<button class="results-tab-btn' + (activeResultsTab === 'summary' ? ' active' : '') + '" data-tab="summary" onclick="switchResultsTab(\'summary\')">Summary</button>';
   out += '<button class="results-tab-btn' + (activeResultsTab === 'fabric' ? ' active' : '') + '" data-tab="fabric" onclick="switchResultsTab(\'fabric\')">Fabric</button>';
-  out += '<button class="results-tab-btn' + (activeResultsTab === 'optics' ? ' active' : '') + '" data-tab="optics" onclick="switchResultsTab(\'optics\')">Optics</button>';
-  out += '<button class="results-tab-btn' + (activeResultsTab === 'power' ? ' active' : '') + '" data-tab="power" onclick="switchResultsTab(\'power\')">Power</button>';
+  out += '<button class="results-tab-btn' + (activeResultsTab === 'optics' ? ' active' : '') + '" data-tab="optics" onclick="switchResultsTab(\'optics\')">Optics &amp; Power</button>';
   out += '</div>';
   out += '<div class="results-tab-panel' + (activeResultsTab === 'summary' ? ' active' : '') + '" data-tab="summary">' + summaryContent + '</div>';
   out += '<div class="results-tab-panel' + (activeResultsTab === 'fabric' ? ' active' : '') + '" data-tab="fabric">' + fabricContent + '</div>';
-  out += '<div class="results-tab-panel' + (activeResultsTab === 'optics' ? ' active' : '') + '" data-tab="optics">' + optHtml + '</div>';
-  out += '<div class="results-tab-panel' + (activeResultsTab === 'power' ? ' active' : '') + '" data-tab="power">' + powerHtml + '</div>';
+  out += '<div class="results-tab-panel' + (activeResultsTab === 'optics' ? ' active' : '') + '" data-tab="optics">' + optHtml + powerHtml + '</div>';
 
   el.dataset.opticMode = 'conventional';
   el.dataset.powerMode = 'eightyPct';
@@ -3460,8 +3461,11 @@ function buildMRCTopoData() {
     if (feHostLink) {
       const feLeafIdxs = feRealIdx[feLeafTier.id] || [];
       if (feLeafIdxs.length > 0) {
+        const hostsPerFeLeaf = Math.max(1, Math.floor(feLeafTier.radix / feHostLink.bundle));
         for (let hi = 0; hi < feHostNodes.length; hi++) {
-          const feLeafIdx = feLeafIdxs[hi % feLeafIdxs.length];
+          const realIdx = parseInt(feHostNodes[hi].id.replace('host-', ''));
+          if (isNaN(realIdx)) continue;
+          const feLeafIdx = feLeafIdxs[Math.min(Math.floor(realIdx / hostsPerFeLeaf), feLeafIdxs.length - 1)];
           edges.push({
             source: feHostNodes[hi].id, target: feLeafTier.id + '-' + feLeafIdx,
             label: feHostLink.bundle + '×' + feHostLink.speed + 'G',
@@ -3827,10 +3831,20 @@ function buildTopoData() {
       const hostNodes = nodes.filter(n => n.tier === 'host');
       const feLeafIdxs = feRealIdx[feLeafTier.id] || [];
       if (feLeafIdxs.length > 0) {
+        const hostsPerFeLeaf = Math.max(1, Math.floor(feLeafTier.radix / hostLink.bundle));
         for (let hi = 0; hi < hostNodes.length; hi++) {
-          const feLeafIdx = feLeafIdxs[hi % feLeafIdxs.length];
+          const hn = hostNodes[hi];
+          const idSuffix = hn.id.replace('host-', '');
+          let feLeafIdx;
+          if (idSuffix === 'last') {
+            feLeafIdx = feLeafIdxs[feLeafIdxs.length - 1];
+          } else {
+            const realIdx = parseInt(idSuffix);
+            if (isNaN(realIdx)) continue;
+            feLeafIdx = feLeafIdxs[Math.min(Math.floor(realIdx / hostsPerFeLeaf), feLeafIdxs.length - 1)];
+          }
           edges.push({
-            source: hostNodes[hi].id, target: feLeafTier.id + '-' + feLeafIdx,
+            source: hn.id, target: feLeafTier.id + '-' + feLeafIdx,
             label: hostLink.bundle + '×' + hostLink.speed + 'G',
             weight: Math.min(Math.max(1, hostLink.bundle / 2), 4),
             bundle: hostLink.bundle, speed: hostLink.speed, fe: true
@@ -4090,9 +4104,30 @@ function renderTopology() {
       .text(name.toUpperCase());
   }
 
+  // Backend/Frontend divider
+  const maxNodeX = Math.max(...data.nodes.map(n => n.pos.x));
+  if (c.feConfig) {
+    const hostY = Math.max(...data.nodes.filter(n => n.tier === 'host' || (n.tier === 'ellipsis' && n.id.startsWith('host'))).map(n => n.pos.y));
+    const feY = Math.min(...data.nodes.filter(n => n.tier === 'feLeaf' || n.tier === 'feSpine').map(n => n.pos.y));
+    const divY = (hostY + feY) / 2;
+    const divX1 = minNodeX - 80;
+    const divX2 = maxNodeX + 80;
+    const divGroup = g.append('g').attr('class', 'topo-divider');
+    divGroup.append('line')
+      .attr('x1', divX1).attr('y1', divY).attr('x2', divX2).attr('y2', divY)
+      .attr('stroke', v('--border')).attr('stroke-width', 1).attr('stroke-dasharray', '8 4');
+    divGroup.append('text')
+      .attr('x', divX1 + 4).attr('y', divY - 8)
+      .attr('fill', v('--text3')).attr('font-size', 9).attr('font-weight', 600).attr('letter-spacing', '1px')
+      .text('BACKEND');
+    divGroup.append('text')
+      .attr('x', divX1 + 4).attr('y', divY + 15)
+      .attr('fill', v('--text3')).attr('font-size', 9).attr('font-weight', 600).attr('letter-spacing', '1px')
+      .text('FRONTEND');
+  }
+
   // Link annotations between tiers (right side)
   const annotGroup = g.append('g').attr('class', 'topo-annotations');
-  const maxNodeX = Math.max(...data.nodes.map(n => n.pos.x));
 
   const rankMap = {};
   c.tiers.forEach((t, i) => { rankMap[t.id] = i; });
