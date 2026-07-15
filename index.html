@@ -1076,7 +1076,6 @@
     <div class="changelog-body">
       <h3>v1.4.2 — July 2025</h3>
       <ul>
-        <li><strong>Frontend links per server</strong> — frontend NIC count is now per server, not per GPU, fixing inflated frontend leaf/spine counts (e.g. 48-port leaf now correctly serves 48 nodes at 1 link each, not 6)</li>
         <li><strong>Frontend topology packing</strong> — topology view now correctly shows multiple hosts sharing each frontend leaf based on port capacity, instead of 1:1 host-to-leaf mapping</li>
         <li><strong>Host ellipsis count</strong> — host row ellipsis now shows omitted count (e.g. "…+12 more") consistent with other topology tiers</li>
       </ul>
@@ -1904,7 +1903,7 @@ function calculateFE(hosts, gpusPerNode) {
   const feLeaf = FE_PLATFORMS.find(p => p.name === feLeafName);
   if (!feLeaf) return null;
 
-  const feLinksPerNode = feLinksPerServer;
+  const feLinksPerNode = gpusPerNode * feLinksPerServer;
   const feLinksTotal = hosts * feLinksPerNode;
   const feLeafCount = Math.ceil(feLinksTotal / feLeaf.downlinkPorts);
   const hostsPerLeaf = Math.ceil(feLinksTotal / feLeafCount);
@@ -2008,7 +2007,7 @@ function calculateFE(hosts, gpusPerNode) {
 
   // Summary metrics
   let summaryContent = '<div class="metrics-grid">';
-  summaryContent += metric(fmtN(feLinksTotal), 'Frontend Links', feLinksPerNode + ' per server @ ' + feNicSpeed + 'G');
+  summaryContent += metric(fmtN(feLinksTotal), 'Frontend Links', feLinksPerNode + ' per node (' + feLinksPerServer + '/GPU × ' + gpusPerNode + ' GPUs) @ ' + feNicSpeed + 'G');
   if (feSpineCount > 0) {
     summaryContent += metric(fmtN(feSpineCount), 'Frontend Spines', feSpine.name);
   }
