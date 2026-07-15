@@ -1076,8 +1076,8 @@
     <div class="changelog-body">
       <h3>v1.4.2 — July 2025</h3>
       <ul>
-        <li><strong>Frontend topology packing</strong> — topology view now correctly shows multiple hosts sharing each frontend leaf based on port capacity, instead of 1:1 host-to-leaf mapping</li>
-        <li><strong>Host ellipsis count</strong> — host row ellipsis now shows omitted count (e.g. "…+12 more") consistent with other topology tiers</li>
+        <li><strong>Host ellipsis count</strong> — host row ellipsis in topology now shows omitted count (e.g. "…+12 more") consistent with other tiers</li>
+        <li><strong>Frontend topology tooltip fix</strong> — frontend leaf connection counts now use actual host totals instead of displayed node count</li>
       </ul>
       <h3>v1.4.1 — July 2025</h3>
       <ul>
@@ -3460,18 +3460,10 @@ function buildMRCTopoData() {
     if (feHostLink) {
       const feLeafIdxs = feRealIdx[feLeafTier.id] || [];
       if (feLeafIdxs.length > 0) {
-        const hostsPerFeLeaf = Math.max(1, Math.floor(feLeafTier.radix / feHostLink.bundle));
         for (let hi = 0; hi < feHostNodes.length; hi++) {
-          const hn = feHostNodes[hi];
-          const realIdx = parseInt(hn.id.replace('host-', ''));
-          if (isNaN(realIdx)) continue;
-          const realFeLeaf = Math.min(Math.floor(realIdx / hostsPerFeLeaf), feLeafTier.perPlane - 1);
-          let bestIdx = feLeafIdxs[0];
-          for (const idx of feLeafIdxs) {
-            if (Math.abs(idx - realFeLeaf) < Math.abs(bestIdx - realFeLeaf)) bestIdx = idx;
-          }
+          const feLeafIdx = feLeafIdxs[hi % feLeafIdxs.length];
           edges.push({
-            source: hn.id, target: feLeafTier.id + '-' + bestIdx,
+            source: feHostNodes[hi].id, target: feLeafTier.id + '-' + feLeafIdx,
             label: feHostLink.bundle + '×' + feHostLink.speed + 'G',
             weight: Math.min(Math.max(1, feHostLink.bundle / 2), 3),
             bundle: feHostLink.bundle, speed: feHostLink.speed, fe: true
@@ -3835,44 +3827,14 @@ function buildTopoData() {
       const hostNodes = nodes.filter(n => n.tier === 'host');
       const feLeafIdxs = feRealIdx[feLeafTier.id] || [];
       if (feLeafIdxs.length > 0) {
-        const totalHostCount = bottomTier.perPlane * hostCountPerLeaf;
-        const hostsPerFeLeaf = Math.max(1, Math.floor(feLeafTier.radix / hostLink.bundle));
         for (let hi = 0; hi < hostNodes.length; hi++) {
-          const hn = hostNodes[hi];
-          const idSuffix = hn.id.replace('host-', '');
-          let startHost, endHost;
-          if (idSuffix === 'last') {
-            startHost = isRail ? (totalHostCount - 1) : (bottomTier.perPlane - 1) * hostCountPerLeaf;
-            endHost = totalHostCount - 1;
-          } else {
-            const idx = parseInt(idSuffix);
-            if (isNaN(idx)) continue;
-            if (isRail) {
-              startHost = idx;
-              endHost = idx;
-            } else {
-              startHost = idx * hostCountPerLeaf;
-              endHost = Math.min((idx + 1) * hostCountPerLeaf - 1, totalHostCount - 1);
-            }
-          }
-          const firstFeLeaf = Math.min(Math.floor(startHost / hostsPerFeLeaf), feLeafTier.perPlane - 1);
-          const lastFeLeaf = Math.min(Math.floor(endHost / hostsPerFeLeaf), feLeafTier.perPlane - 1);
-          const connectedLeaves = new Set();
-          for (let fl = firstFeLeaf; fl <= lastFeLeaf; fl++) {
-            let bestIdx = feLeafIdxs[0];
-            for (const idx of feLeafIdxs) {
-              if (Math.abs(idx - fl) < Math.abs(bestIdx - fl)) bestIdx = idx;
-            }
-            connectedLeaves.add(bestIdx);
-          }
-          for (const feIdx of connectedLeaves) {
-            edges.push({
-              source: hn.id, target: feLeafTier.id + '-' + feIdx,
-              label: hostLink.bundle + '×' + hostLink.speed + 'G',
-              weight: Math.min(Math.max(1, hostLink.bundle / 2), 4),
-              bundle: hostLink.bundle, speed: hostLink.speed, fe: true
-            });
-          }
+          const feLeafIdx = feLeafIdxs[hi % feLeafIdxs.length];
+          edges.push({
+            source: hostNodes[hi].id, target: feLeafTier.id + '-' + feLeafIdx,
+            label: hostLink.bundle + '×' + hostLink.speed + 'G',
+            weight: Math.min(Math.max(1, hostLink.bundle / 2), 4),
+            bundle: hostLink.bundle, speed: hostLink.speed, fe: true
+          });
         }
       }
     }
